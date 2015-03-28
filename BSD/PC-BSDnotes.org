@@ -1,0 +1,792 @@
+* PC-BSD10.1 setup
+** keyboard
+In the Konsole, SHIFT-right is the key to switch to the next tab.
+** misc basics 
+=uname -a= displays 'FreeBSD hostname... other stuff''
+
+The graphical editor with freebsd is =/usr/local/bin/mousepad=, but not in PC-BSD
+In PC-BSD with KDE, kate is in =/usr/local/bin/kate=
+** Initial PC-BSD install
+The PC-BSD install is quick (from DVD).  The install disk is gigantic, but there does not seem to be many programs on it other than all the desktop managers. The installed size was under 4GB.
+
+After FreeBSD and DragonFly BSD would not install, I tried PC-BSD and it worked.
+During the install, click on the CONFIGURE button to change the target disk and 
+to pick a few extra programs to install.
+  * select the correct target disk for the instal
+  * select the CONFIGURE button for disks and then the advanced button.  Choose disk encryption using GELI.
+
+
+The touchpad has the same problem as Trisquel, so I will have to fix it. The control panel does not include a touchpad section.
+
+** adding users
+Add users for each silo, then put a mini VirtualBox in each one with dillo and seamonkey (nothing else) and allow those VB users to SSH to a dropbox that is used for each user.  No VirtualBox Guest Additions
+
+#+BEGIN_SRC SHELL
+# I add this so my old scripts work:
+ln /usr/local/bin/bash /bin/bash
+# You will be prompted to enter user ID, etc.
+adduser -s /usr/local/bin/bash -w yes 
+#+END_SRC   
+
+Add web user ids for S1web and H1web that will talk to VBox VMs, then allow S1 and H1 to get to those groups (but not the other way around):
+#+BEGIN_SRC SHELL
+pw usermod S1 -G S1web
+chmod -R 775 /usr/home/S1web
+zfs create S120/S1
+zfs set compression=on S120/S1
+zfs set mountpoint=/S120D/S1 S120/S1
+chown S1:S1 /S120D/S1
+#+END_SRC   
+
+
+Add public directory
+#+BEGIN_SRC SHELL
+sudo mkdir /home/public
+sudo chmod 755 /home/public
+sudo mkdir /home/public/DropBox
+sudo chmod 777 /home/public/DropBox/
+
+sudo mkdir /home/public/Documents
+sudo chmod 755 /home/public/DropBox/
+
+sudo ls -ld /home/public/
+sudo chown -R super:super /home/public
+#+END_SRC   
+
+** misc program installs
+vim was already installed.  
+
+#+BEGIN_SRC SHELL
+## dillo is a lite-weight graphical browswer
+## with no scripting, but id causes system freeze.
+## sudo pkg install dillo# dillo caused crashes.
+sudo pkg install gnucash 
+sudo pkg install xpdf # minimalist pdf reader, Free BSD also has mupdf installed
+sudo pkg install geequie # minimalist jpg viewer
+sudo pkg install lynx # text web browser
+sudo pkg install w3m w3m-img # minimalist web browser
+# for ext2 file system so I can talk to linux
+sudo pkg install e2fsprogs # mount ext2 disks
+sudo pkg install python3
+sudo pkg install libreoffice
+sudo pkg install seamonkey
+sudo pkg install texlive-full
+#+END_SRC
+
+**** python
+python2 was already installed
+
+I installed R throught the AppCafe
+
+**** tahoe-lafs
+Tahoe-LAFS has dependencies that did not build on FreeBSD:
+#+BEGIN_SRC SHELL
+sudo pkg install py27-pycrypto
+sudo pkg install py27-pycryptopp
+#+END_SRC   
+tahoe-lafs did not have a package, but I downloaded from source (it is python 2x).  After unpacking
+run build (not install)
+=sudo python setup.py build=
+
+The build failed on =pycryptopp=, and installing from pkg did not solve the problem.
+
+I saw an error for =epoll.h= missing, but it completed.
+** Tor and privoxy in FreeBSD VM
+*** commands
+The install for privoxy said to set this in =/etc/rc.conf=:
+#+BEGIN_SRC SHELL
+privoxy_enable="YES"
+#+END_SRC   
+
+*** settings
+After installation, I found =privoxy= settings in =/usr/local/etc/privoxy=. Search for =9050= in the config file and set the option to forward socks to 9050 for tor.  Possibly restart =privoxy= using =/usr/local/etc/rc.d/privoxy restart=
+
+After Installation, I found =tor= settings in =/usr/local/etc/tor=.   Possibly restart =tor= using =/usr/local/etc/rc.d/tor restart=
+
+Start =Tor= from a non-root user by typing =tor= from the command line.  Privoxy should also start from a non-root user (in theory).
+*** info
+In a prior install, privoxy did not install the config files, so it wouldn't run.
+
+It said to run =service privoxy forecast= and that the examples were copied to =/usr/local/share/examples/privoxy=
+
+Docs in =/usr/local/share/doc/privoxy/user-manual=
+
+The confdir listed in the default config file points to =/usr/local/etc/privoxy=
+
+** Initial Tweaks
+*** startup
+I changed my shell to =bash=, then put this into =~/.bashrc=
+#+BEGIN_SRC SHELL
+#!/usr/local/bin/bash
+# set the login shell to /usr/local/bin/bash because 
+# FLUXBOX will default to tcsh and
+# my scripts won't work
+# Set VIM as default
+alias vi='vim'
+alias lsl='ls -lotrG |tail -n 20'
+alias ls='ls -G'
+# linux:
+#LS_COLORS='di=1;31;42:fi=5:ln=31:pi=5:so=5:bd=5:cd=5:or=31:mi=0:ex=35:*.rpm=90'
+# BSD style:
+LSCOLORS='haafxbxEabxDgxGxxxxexdxg'
+
+
+export LSCOLORS
+export COLOR_FORCE='1'
+
+# Enable color for git diffs
+MORE="-erX" ; export MORE
+
+tst=$(xset q|tr -s ' '|grep bell|cut -d ' ' -f 4)
+if [ "$tst" != "20" ]; then
+        echo "Fixing the bell now."
+  sleep .5; xset b 20 7000
+  xset -dpms
+  xset s off
+  xset s noblank
+
+  # display options
+  xset q
+else
+        echo "The bell was already fixed."
+fi
+#+END_SRC
+*** FLUXBOX window setup
+You can run the following script to open a bunch of xterms all at once.  I call the script =xtermgo.sh=
+#+BEGIN_SRC SHELL
+#!/bin/sh
+# This is for fluxbox
+#
+# The original was in /usr/local/etc/X11/xinit/xinitrc,
+# which is used for twm in FreeBSD but not fluxbox.
+#
+# the format of the geometry command
+#  * width in characters
+#  * height in characters
+#  * x-axis position in pixels (use +100 to start 100 pixels
+#    from the left or -10 to put the right edge ofthe box 
+#    10 pixels from the right)
+#  * y-axis position (0 is at the top, bigger values are farther
+#    down).
+xterm -geometry 60x2-10+600 &
+xterm -geometry 60x5-10+500 &
+xterm -geometry 80x20-10+120 &
+xterm -geometry 70x5-10+10 &
+
+# run vim in an xterm window:
+exec xterm -geometry 80x16+0+400 -e vim
+#+END_SRC
+*** sshd
+One-time setup: add to =/etc/rc.conf=:
+#+BEGIN_SRC SHELL
+sshd_enable="YES"
+#+END_SRC   
+
+# To start it:
+#+BEGIN_SRC SHELL
+/etc/rc.d/sshd start
+#+END_SRC   
+
+*** Adobe Flash
+The install comes with Adobe Flash, Disable everything.  I don't know if I will need it to read 'protected content'
+
+*** mouse/touchpad
+I spent half a day trying to fix the trackpad, but the synaptics driver wouldn't work
+
+The solution: 1) get an external keyboard and mouse, 2) put a rubber pad over the touchpad and use an external mouse.
+
+next thing to try: in PC-BSD there was a file in =/usr/local/share/X11/xorg.conf.d/50-synaptics.conf= that contained a line for disabling Apple clickpads, but it had a specific product id that might not match mine, and I am not running synnaptics as far as i know, but the =/var/log/xorg.log= file showed that diretctory name.
+
+**** didn't work
+fix the touchpad...
+
+=sysctl -a|grep psm= shows that I have have a PNP plug and play mouse device HTD0612
+
+
+try editing /usr/local/share/hal/fdi/policy/10osvendor/
+per https://forums.freebsd.org/threads/how-to-disable-mousepad-tapping.17370/
+
+restart hald:
+/usr/local/etc/rc.d/hald restart
+
+THIS DIDN'T WORK EITHER:
+
+the man page for =psm= had a special note for Lenovo: add 
+hw.psm.trackpoint_support="1"
+to /boot/loader.conf
+
+https://wiki.freebsd.org/SynapticsTouchpad
+
+An opening line made a vague reference to =hw.psm.synaptics_support tunable= and i think that goes into =/etc/sysctl.conf=
+
+**** this did not work:
+I ran gsynaptics at the command line and it said that I have to do one of two things:
+   SHMConfig = true
+in xorg.conf
+or xf68 something.  A pc-bsd post said to install xf86-input-synaptics
+see forums.pcbsd.org/showthread.php?t=18567
+
+xf86-input-synaptics was already installed.
+
+add this line to /boot/loader.conf
+hw.psm.synaptics_support="1"
+
+Disable moused in =/etc/rc.conf= by setting:
+moused_enable="NO"
+
+edit =/etc/X11/xorg.conf= in several ways:
+a) in section "ServerLayout"
+InputDevice "Synaptics_Touchpad" "AlwaysCore"
+
+b) In section Module
+Load "synaptics"
+
+c) in section "InputDevice" add the big section that I used for Trisquel
+
+*** mime types for fluxbox
+Fluxbox desktop does not use the file associations that are set by KDE.  Create a real RTF file called myfile.rtf, and watch =xdg-open= show you the mime type, then associate libreoffice with that mime type. This only works if there is already some type of config file for Xorg.
+#+BEGIN_SRC SHELL
+xdg-mime query filetype myfile.rtf
+xdg-mime query default /usr/local/bin/libreoffice text/rtf
+xdg-mime query default /usr/local/bin/mupdf application/pdf
+# consider geequi for freebsd image viewer for  image/jpeg
+#+END_SRC   
+
+#+BEGIN_SRC SHELL
+
+#+END_SRC   
+
+*** dirhash
+There is a program called dirhash that helps the UFS file system run faster when there are directories with lots of files--not sure how to install it.
+... but I use ZFS, so it is a moot point.
+** Network and Wifi
+*** wifi
+I have Atheros AR8161 in the Lenovo and maybe another device (wifi vs ethernet)
+
+# to list wifi
+ifconfig -v wlan0 list scan
+
+# easier to read but truncated NWID:
+ifconfig -v wlan0 list scan
+
+ifconfig wlan0 Verizon-1234-1234 wpakey xxxx # did not work on FreeBSD -- there is no 'wpakey' in FreeBSD man page for ifconfig
+*** usb ethernet
+The ethernet card in the Lenovo does not work, but I have a USB ethernet card by Gigabit.
+
+It works on Trisqel 7.  The firmware is lsted as RTL8153, but I don't see files for that.  I see files fro RTL8211E for gigabit ethernet, also 8192, 8187, 8180, 8723.  There is probably a way to install it.
+
+* Utilities
+** ntpdate
+For my FreeBSD virtual machines that have been saved in running mode, the clock will be out of sync when you restart the VM.  If ntpd is running, then go to the root user and run:
+#+BEGIN_SRC SHELL
+/etc/rc.d/ntpd restart
+#+END_SRC   
+
+If ntpd is not running try running (from root user):
+#+BEGIN_SRC SHELL
+ntpdate 2.fedora.pool.ntp.org
+#+END_SRC   
+
+If you run =ntpdate= when =ntpd= daemon is running, you will see an error message.
+
+** pdf reader
+PC-BSD seems to come with mupdf.  For my FreeBSD VMs, I installed xpdf.
+** linux vs BSD commands:
+BSD partitions are called =slices= so some of the shortcut names for disk use 's' in the name
+
+http://www.techrepublic.com/blog/linux-and-open-source/get-linux-and-freebsd-hardware-info-with-guide-to-commands/
+** show disk names and partitions
+=parted= was not installed in PC-BSD, I installed =gdisk= and used
+
+=gdisk -l /dev/da1= to get info about the partition table of a USB stick.  This command might be more dangerous than parted.
+
+=gpart show -l= or =gpart show -p= might be the native commands that work best.
+Read the =gpart= output carefully because info for a slice (partition) will be separate from the root of the disk.
+** device listings
+*** camcontrol devlist -v
+this shows the  names of disks as they might appear in the BIOS boot menu
+*** atacontrol list
+this did not work for me
+*** pciconf -lv
+shows my devices on the lenovo:
+
+none2@pci0:1:0:0:       class=0x020000 card=0x397917aa chip=0x10911969 rev=0x10 hdr=0x00
+    vendor     = 'Atheros Communications Inc.'
+    device     = 'AR8161 Gigabit Ethernet'
+    class      = network
+    subclass   = ethernet
+ath0@pci0:2:0:0:        class=0x028000 card=0x30a117aa chip=0x002b168c rev=0x01 hdr=0x00
+    vendor     = 'Atheros Communications Inc.'
+    device     = 'AR9285 Wireless Network Adapter (PCI-Express)'
+*** usbconfig
+*** sysctl -a -h
+list hardware stuff in more detail that lsblk
+** df -T for space usage
+the =df -T= command adds filesystem type of mounted devices and usage in blocks.
+** eject a disk
+For a CD, use =cdcontrol -f=
+
+For USB disk: =camcontrol eject /dev/da1=
+
+=camcontrol= also has commands for starting, stopping, sleeping, scanning and doing other things to devices.
+
+Disks might be mounted by the automount daemon (amd), so unmounting might not leave them unmounted??
+** free memory
+use =top= and read the info near the top
+
+** tor and privoxy
+See my notes above for adjusting the =privoxy= settings.  The trick was to look under =/usr/local/etc=.
+
+#+BEGIN_SRC SHELL
+pkg install tor
+pkg install torsocks
+# The new command line interface for torsocks is:
+#    usewithtor COMMAND
+pkg install privoxy
+
+# autostart privoxy and tor
+p_tst=$(cat /etc/rc.conf|grep privoxy|head -n 1)
+if [ -z "${p_tst}" ]; then
+  echo 'privoxy_enable="YES"' >> /etc/rc.conf
+fi
+
+t_tst=$(cat /etc/rc.conf|grep tor_enable|head -n 1)
+if [ -z "${t_tst}" ]; then
+  echo 'tor_enable="YES"' >> /etc/rc.conf
+fi
+
+# my privoxy had no config file,
+# so get one from http://pastebin.com/ekK5S57V
+
+if [ ! -d /etc/privoxy ]; then
+  mkdir  /etc/privoxy
+  chmod 655 /etc/privoxy
+fi
+
+if [ ! -f /etc/privoxy/config ]; then
+  # this does not work -- it gets html crap
+  curl --url http://pastebin.com/ekK5S57V > /etc/privoxy/config
+fi
+
+# run privoxy as a regular user -- not root
+tor 2>&1 > torlog.log
+privoxy /etc/privoxy/config
+#+END_SRC   
+** X11, xset for display, keyboard, sys font, bell, power managment
+*** xset
+This does not work in a shell by default.  Try adding =sleep 1= on the same line before an xset command.
+
+I manually changed my shell script to bash, so I put my startup commands for xset in =~/.bashrc=
+
+For the default shell of =/bin/csh=, put the =xset= commands into =~/.tcshrc=
+Show settings:
+#+BEGIN_SRC SHELL
+xset -q
+#+END_SRC   
+
+Disable power management (the thing that puts your computer to sleep)
+#+BEGIN_SRC SHELL
+# make the bell reasonable:
+sleep 1;b 20 7000
+# disable power management:
+xset -dpms;
+# disable screen saver
+xset s off
+xset s noblank
+#+END_SRC   
+ 
+The =setterm= command might interact with =xset=.  I do not need to run this.
+#+BEGIN_SRC SHELL
+# disable blank screen and power saving 
+setterm -blank 0 -powerdown 0
+#+END_SRC   
+ 
+#+BEGIN_SRC SHELL
+
+#+END_SRC   
+ 
+ 
+
+*** =/usr/local/etc/X11/xinit/xinitrc=
+This file contains the program that runs when X11 starts--it does nothing for me when I run fluxbox.  it might do something when I run twm in FreeBSD.
+At the end of the default file
+is  a list of =xterm= and =xclock= commands.  I could try to create a =~/.xinitrc= file to
+replace it and also add my own xset commands to fix the beep.
+* Virtualization
+** VirtualBox
+If you copy the Vbox directory to a new computer, get the =~/.config/VirtualBox= directory too.
+** freebsd in virtual box
+*** Initial VB install
+The network seemed to work for ftp but not ping -- don't worry about it.
+
+Allocate 8 GB or so for the disk in the Virtual Box setup and point the Virtual box STORAGE setting to the ISO.
+
+When booting FreeBSD, you might have to wait 60 seconds after you see the login prompt... it might procede with no
+login to the install.  I previously tried logging in and then when I ran =exit= I returned to the install.
+
+I used the automatic install with UFS file system because ZFS requires too much overhead for a VM.
+
+The VB install is slower than install to a hard drive, but it works.
+
+for the H1 (natmsg) machine, in installed source code.
+
+Inside the H1 machine, I enabled powerd, natp but not moused or kernel dumpdev.
+
+After the installation completes, rather than choose reboot I choose =Live CD= and then click the x in the top-right of
+the VirtBox window and choose to send the power down command.  I then remove the install ISO from the VirtualBox 
+Storage section for the VM, and the restart it.
+
+For the Lenovo (no VTX hardware virtualization) I had to use a 32-bit FreeBSD ISO for the 'boot-only' install.
+*** Setup after install
+# log in as root
+pkg upgrade
+## fix /etc/machine-id file:
+## without the machine-id file, seamonkey and other graphics apps won't work
+dbus-uuidgen --ensure
+pkg install xorg # 321MB install, and it comes with twm and mousepad (graphical text editor)
+
+# you do NOT need to install xfce - twm will work good enough for seamonkey
+
+pkg install seamonkey
+pkg install vim-lite
+pkg install xpdf # a tiny pdf reader
+# the python3 install gets two versions, but the extra
+# version is only 2MB
+pkg install python3 
+
+# 3.3 GB so far
+pkg install git
+** FreeBSD Jails
+In theory, I could use VNC to connect to an graphical app running in a jail, but they won't work from the command line in the jail.
+
+The Warden application helps to install jails (similar to virtualization),
+and the PC-BSD handbook ch 8.2 describes it.  There is also Chapter 15 of the FreeBSD user manual: http://www.freebsd.org/doc/handbook/jails-build.html
+
+A traditional jail is used for daemons that have no GUI.  A Ports jail is for GUI apps and is less secure.
+
+In my first ports jail, I did not include the system source or the other things on that menu.
+
+I chose ip 192.168.1.19
+
+In the configuration screen, the VNET option is to allow the app to broadcast to the network, which my web browser does not need.
+
+Select the new jail near the top of the screen, then click on TOOLS in the bottom half.:w
+
+Click the Start button to start the jail, then the button for AppCafe opens.  You can now add an app into the jail--AppCafe will 
+show the jail name at the top with the botton selecting that jail.  Install by clicking the 'Install in jail" button.
+
+After installing the app, click on User Administrator for that jail
+
+THE GUI JAIL INSTALLER DID NOT WORK. TRY THIS:
+ 1) FIRST RUN jls and look at the list of jails -- remember the numeric jail number
+ 2) run from the command line in a regular terminal (nonjail) for jail #4:
+    sudo pkg --jail 4 install seamonkey
+    sudo pkg --jail 4 install pinentry-curses # it wanted another package
+
+ 3) I entered the jail via the Warden terminal but the gui app would not load.
+**** bhyve
+sudo pkg install bhyve-rc-1
+
+This installs the virutualization program called bhyve and the tmux screen sharer (like GNU screen).
+
+tutorial: http://www.bsdnow.tv/tutorials/bhyve
+
+I get the imporession that bhyve is comman line only.  the site has no documentation.
+
+try half way through this vid http://trac.pcbsd.org/ticket/1410
+
+45 min into the vid he mentioned that VGA was not available at that time (2014).
+
+forget  bhyve unltess it is a command line app
+
+bhyve might not run on a box without a virtualization chip, but I'm not sure.
+**** virtual box
+i installed virtbox from the pc-bsd installer.
+* Disk Operations
+** reading ext4
+In FLUXBOX, there is a blue icon int the tray on the bottom that you can click to mount things.  I had an ext2 disk and I mounted using the FLUXBOX option for ext4, and I was able to read it.  I was mounted under furse with options =fusefs, local, synchronous)=.
+I could not create files on that disk.  Here is the output from =mount=:
+
+=/dev/fuse on /media/F256-ext2 (fusefs, local, synchronous)=
+
+
+I might be able to read/write ext2.  To read ext4, try this to mount it as ext2 in read-only mode.
+
+# did not work
+#+BEGIN_SRC SHELL
+gpart show -l
+# verify if the name is da1p1 or da1s1:
+ls /dev/da1*
+mount -t ext2fs -o ro /dev/da2s4 /my_mountpoint
+#+END_SRC   
+
+
+#+BEGIN_SRC SHELL
+pkg install fusefs-ext4fuse
+kldload fuse.ko
+# add 'fusefs_load="YES"' to /boot/loader.conf
+ext4fuse /dev/da1p1 /media/L250
+#+END_SRC   
+
+** reformat a disk
+
+Identify the disk to format:
+#+BEGIN_SRC SHELL
+gpart -show
+gpart -show -l
+camcontrol devlist -v
+#+END_SRC   
+
+The next step will ruin the disk and make it a GPT disk:
+#+BEGIN_SRC SHELL
+# delete the two partitions numbered 1 and 2 from da1:
+gpart delete -i 1 /dev/da1
+gpart delete -i 2 /dev/da1
+gpart destroy /dev/da1
+gpart create -s GPT /dev/da1
+# avoid recalling the commands by mistake:
+rm ~/.history
+rm ~/.bash_history
+#+END_SRC   
+
+add partitions.  =-b= is the begining blocks,
+#+BEGIN_SRC SHELL
+gpart add -a 1024 -l S60 -t linux-data -b 10 /dev/da1
+#+END_SRC   
+
+for ext2:
+#+BEGIN_SRC SHELL
+pkg install e2fsprogs
+man mke2fs
+mke2fs -t ext2 -L S60 /dev/da1p1
+mount -t ext2fs /dev/da1p1 /media/S60/
+#+END_SRC   
+
+* ZFS
+** Format an external drive with ZFS, no GELI
+The best tutorial is the man page for ZFS and the 20+ examples at the end
+First check the existing disks:
+
+#+BEGIN_SRC SHELL
+gpart show -l
+camcontrol devlist -v
+#+END_SRC
+
+
+If you attached a device with existing partitions, delete the partitions first, then destroy the label.  
+This deletes the da2s4 by using =-i 4=:
+#+BEGIN_SRC SHELL
+gpart delete -i 4 da2
+# after all partitions are deleted...
+gpart destroy da2
+#+END_SRC
+
+
+I do not do the following because I want to use the whole disk:
+#+BEGIN_SRC SHELL
+# do not allocate partitions for ZFS... do not do this 
+# unless you want to build a RAid that uses equal size chunks
+# on different disks
+gpart create -s GPT da2
+gpart show da2
+gpart add -b 34 -s 3600M -t freebsd-zfs da2
+gpart show da2
+#+END_SRC
+
+
+Whole disk... Run the delete and destroy commands above, then try this:
+#+BEGIN_SRC SHELL
+# initialize an entire disk:
+zpool create W500 /dev/da2
+zpool list
+#+END_SRC
+The disk now appears to be mounted in /W500, but it is not writable
+
+
+
+#+BEGIN_SRC SHELL
+mkdir /junk
+zfs create W500/junk1
+zfs set mountpoint=/junk W500/junk1
+zfs set compression=on W500/junk1
+mkdir /junk/sam # can not put quota here because it is not a zfs data set from the 'zfs create' command
+zfs set quota=10G W500/junk1
+#+END_SRC
+
+Get lots of info on a ZFS dataset
+#+BEGIN_SRC SHELL
+zfs get all W500/junk1
+#+END_SRC
+
+
+Ummount/detach a disk 
+#+BEGIN_SRC SHELL
+zfs unmount /junk
+# OR
+zfs unmount W500/junk1
+#+END_SRC
+
+Take the pool temporarily offline. which I don't think you want
+to do. Use the -t option or else it will be offline in reboot.
+#+BEGIN_SRC SHELL
+zpool offline -t W500
+#+END_SRC
+
+
+Remove a disk from the pool -- ruins it if there is only one disk left:
+#+BEGIN_SRC SHELL
+zpool detach W500
+# check data
+zpool iostat -v W500
+#+END_SRC
+
+# Destroy before reformatting the disk:
+#+BEGIN_SRC SHELL
+zfs unmount /W500D/arch # ???
+zpool destroy W500
+#+END_SRC
+
+
+#+BEGIN_SRC SHELL
+#+END_SRC
+
+
+#+BEGIN_SRC SHELL
+#+END_SRC
+
+
+#+BEGIN_SRC SHELL
+#+END_SRC
+
+
+#+BEGIN_SRC SHELL
+#+END_SRC
+
+
+#+BEGIN_SRC SHELL
+#+END_SRC
+
+** ZFS over GELI
+
+https://forums.freebsd.org/threads/howto-fde-freebsd-9-0-rc1-geli-zfs-on-root-with-boot-from-usb-stick.27618/
+
+I will use the whole disk rather than a partition, so skip the first few steps
+from the link (geli might be able to run without sudo)
+#+BEGIN_SRC SHELL
+glabel label W500 /dev/da2
+geli init -b /dev/label/W500
+geli attach  /dev/label/W500
+#+END_SRC
+
+Creation ZFS pool and FS (zpool has upper case -O and zfs is lower case -o):
+#+BEGIN_SRC SHELL
+mkdir /W500D
+zpool create -O mountpoint=/W500D -O compression=on W500 /dev/label/W500.eli
+zfs create -o mountpoint=/W500D/data W500/data
+#+END_SRC
+
+
+
+#+BEGIN_SRC SHELL
+zfs set compression=on W500/data
+mkdir /junk/sam # can not put quota here because it is not a zfs data set from the 'zfs create' command
+zfs set quota=10G W500/data
+#+END_SRC
+
+Mount it for the first time:
+#+BEGIN_SRC SHELL
+zfs set mountpoint=/W500D/data W500/data
+zfs mount -o compress=on W500/data
+#+END_SRC
+
+Look at the properties
+#+BEGIN_SRC SHELL
+zfs get all W500/data
+#+END_SRC
+
+** Day-to Day
+*** export a ZFS disk before using it on another computer
+Export the pool called W500 before using it on another computer;
+#+BEGIN_SRC SHELL
+# first change your directory so that you are not
+# in the device that you want to export:
+cd ~
+sudo zpool export W500
+sudo geli detach /dev/label/W500.eli
+# if it a USB or similar external device
+camcontrol eject /dev/da2
+#+END_SRC   
+
+On the other computer, use the =import= command.
+
+*** Use a USB ZFS drive on a new computer
+The man page for zfs and zpool are the best starting point.
+
+Before using a USB ZFS disk called W500 on a new computer, load it on the original computer and run =sudo zpool export W500=
+
+I have a disk that is encrypted with GELI with ZFS over it.
+
+Connect the disk to the USB port. 
+
+If you properly exported it from the other computer,
+
+#+BEGIN_SRC SHELL
+sudo zpool import W500
+#+END_SRC   
+and it should be visible and mounted -- i don't recall entering my geli password, but maybe because it was the same as the password used on the other geli disk.
+
+** manually import/reattach of a GELI ZFS disk
+
+#+BEGIN_SRC SHELL
+ # verify that the disk label appears:
+gpart show -l
+ls /dev/label 
+# look for "W500" to appear or whatever you named it
+sudo geli attach /dev/label/W500
+#+END_SRC
+You should be prompted to enter the GELI password to decrypt the disk.
+
+ZFS should magically detect the disk and bring it online, but not mount it.
+Mount it to the directory that I made called /W500D.  The datasets under it will appear.
+#+BEGIN_SRC SHELL
+zfs mount -o compress=on W500/data
+zfs mount -o compress=on W500/arch
+#+END_SRC
+
+
+
+** Destroy a pool
+The remove command is for special things like hot spares, cache. It does not apply here.
+The detach command is for breacking mirrors.  It does not apply here.
+Do not export it because that is not a permanent destruction.
+#+BEGIN_SRC SHELL
+zpool destroy S120 
+#+END_SRC   
+
+** Snapshots
+*** create snap of main tank
+#+BEGIN_SRC SHELL
+sudo zfs snapshot -r tank@bobsnap20150313a
+sudo zfs list -t snapshot
+#+END_SRC   
+
+
+* footer
+#+BEGIN_SRC SHELL
+
+#+END_SRC   
+
+#+BEGIN_SRC SHELL
+
+#+END_SRC   
+
+
+** read HFS+
+no can do.
+
+#+BEGIN_SRC SHELL
+#+END_SRC
+
+
+#+BEGIN_SRC SHELL
+#+END_SRC

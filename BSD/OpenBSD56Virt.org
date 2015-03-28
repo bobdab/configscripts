@@ -1,0 +1,501 @@
+* OpenBSD on VirtualBox
+(These note are made with emacs org-mode and can be converted to HTML using something like C-c C-e h)
+
+There is an old post from 2009 saying that some Virtual box bugs went away way VirtBox is startedon the command line with an option to say that hardware virtualization is not avaialable:
+https://jreypo.wordpress.com/2009/12/14/openbsd-and-virtualbox/
+
+#+BEGIN_SRC SHELL
+   jmr@wopr:~# VirtualBox -startvm <uid_or_name_of_the_vm> -norawr0
+
+   jmr@wopr:~# VBoxSDL -norawr0 -vm <uid_or_name_of_the_vm>
+#+END_SRC SHELL
+
+I used 380MB RAM and a 2GB hard drive with the 5.6-32 OpenBSD dist.
+Before starting, I selected the OpenBSD entry on the left side of VirtualBox, then double-clicked the STORAGE box on the right and cilcked the little plus sign over the CD icon and pointed to install56.iso.
+
+On first boot, let it sit a few seconds at the prompt, and it should start to load.
+
+install options (after you click on the virtual machine, you have to press the magic key to get back to your main OS. In the bottom-right of the virtual machine is yoru magic key.. mine is the left ALT key):
+  + i for install
+  + L for a list of keyboards, then I chose us
+  + for network install, I accepted the default of em0
+  + accept default for dhcp
+  + I did not configure ipv6 and when prompted for the next network to configure, i left 'none' as the option.
+  + password for root THEPASSWORD
+  + start sshd ? yes
+  + start ntp? yes
+  + ntp server = default
+  + start X11? yes (the pkg_add command does not work without X11)
+  + suspend on lid close: yes
+  + new user: natmsg
+  + disable ssh logins to root: no
+  + target disk is the default: wd0
+  + use whole disk
+  + auto disk config
+  + to install sets, it will be eithe cd0 or cd1.  After selecting cd0 I was prompted for the path, and the default was 5.6/i386.
+  + When prompted with a list of 'sets' (bsd, bsd.rd,bsd.mp...), unselect X sets by typing -x*
+  + you might have to type yes to continue without the signature--check the signature of the ISO file if you want to..
+  + after installing those sets, keep the default of 'done' for the next prompt
+  + when the prompt says 'reboot' in the big paragraph, press the left ALT key to esacep the virutal machine and then close the windo and choose power down.  Then go to Virtual box and remove the install56.iso CD under the STORAGE box in VirtBox.
+
+* After first reboot
+** sudo
+I logged in as USER1, then had to run =su= to make USER1 a sudo user:
+#+BEGIN_SRC SHELL
+su
+vi /etc/sudoers
+G         [captialG is the vi command to go to the bottom]
+#+END_SRC
+Now arrow up to the line that says:
+=root     ALL=(ALL) SETENV:ALL= and duplicate it by pressing =Yp= (must be capital Y).
+
+Now move the cursor over the =r=  in =root=  and type =cw= to change that word, and type =USER1= and escape.  Type =:w!= and ENTER then =:q= to quit.
+
+** Prepare for using =pkg_add=
+sudo pkg_check did not work
+
+I tried adding : =
+=export PKG_PATH=ftp://ftp.openbsd.org/pub/OpenBSD/5.6/packages/i386/=
+didn't work
+
+#+BEGIN_SRC SHELL
+ftp ftp://ftp.openbsd.org/pub/OpenBSD/5.6/packages/i386/
+ls pkgl*
+get pkglocatedb-1.1.tgz
+quit
+
+sudo tar -C / -xzvphf pkglocatedb-1.1.tgz4
+sudo pkg_check
+sudo pkg_add vim emacs lynx
+#+END_SRC
+
+when you use the =pkg_add= command to add packages, be sure to pick ones that say =no_x11= or it will try to install the entire X11 desktop.  X11 is smaller on OpenBSD than on other OSs, and it does make some tasks easier.
+
+Whey you run =sudo pkg_add python= select something that is version 3.4 or higher.
+
+=dmesg | less= and look for =avail mem= near the top.
+=sysctl|less= to check hardware
+
+=sysctl hw.disknames= for disk names.
+
+=sudo disklabel wd0= disk information about a disk hw.
+
+** install necessary packages
+In addition to a text editor and a web browser (=lynx=) install these:
+
+#+BEGIN_SRC SHELL
+sudo pkg_add python # choose version 3.4 or higher
+sudo pkg_add lynx
+sudo pkg_add libgcrypt # should be versin 1.6.1 or higher along with libgpg-error
+sudo pkg_add unrtf
+sudo pkg_add nano # text editor
+
+* finding packages
+#+BEGIN_SRC SHELL
+ftp ftp://ftp.openbsd.org
+#now navigate to:
+ftp.openbsd.org/pub/OpenBSD/5.6/packages/i386
+
+get curl [hit the tab key]
+get wget [hit the tab key]
+get lynx [hit the tab key]
+#+END_SRC
+
+
+* OpenBSD Setup and Package Installs using source code (from an old test)
+** If you did not install X11 during the inital OpenBSD install, go back and do it because ports does not want to work with out it, and it seems difficult to install after the fact.
+** pkg_check
+** add this line to =/etc/mk.conf=
+USE_SYSTRACE=YES
+** export PKG_PATH=ftp://ftp.openbsd.org/pub/OpenBSD/5.6/packages/`machine -a`/
+** CVS command
+ run the cvs command (I previously put this in anoncvs.sh) or get the archive of /usr/src:
+# I think this gets the source for the system by itself without the ports.
+#+BEGIN_SRC SHELL
+cvs -qd anoncvs@anoncvs3.usa.openbsd.org:/cvs get -rOPENBSD_5_6 -P src
+#+END_SRC
+
+
+I think this is needed if you want to install the source-based ports:
+This is a 23MB file that unzips to 200+ MB
+#+BEGIN_SRC SHELL
+cd /home/super
+ftp ftp://ftp.openbsd.org
+#+END_SRC
+Now get this file from the ftp site (navigate using the =cd= command): =pub/OpenBSD/5.6/ports.tar.gz=
+
+** Unzip and untar ports in the /usr directory
+#+BEGIN_SRC SHELL
+gunzip ports.tar.gz
+tar -xf ports.tar -c /usr/
+#+END_SRC
+
+
+** Install Lynx
+ Lynx is a tiny, text-based browswer that installs quiicly.
+Run these commands:
+#+BEGIN_SRC SHELL
+      cd /usr/ports/www/lynx;   
+      make install
+#+END_SRC
+(this will also install =bzip2=)
+
+** Compile vim without x11.
+if you do not use the env command it 
+   will take hours to download and compile all the GUI crap
+
+#+BEGIN_SRC SHELL
+cd /usr/ports/editors/vim 
+env FLAVOR=no_x11 make install
+#+END_SRC
+
+** Install emacs from source without x11
+#+BEGIN_SRC SHELL
+cd /usr/ports/editors/emacs
+env FLAVOR=no_x11 make install
+#+END_SRC
+
+Note that this downloaded and installed 
+#+BEGIN_SRC SHELL
+      gettext
+      gperf
+      gmake
+      ibiconv/libiconv-1.1.4.tar.gz 
+      groff (find rainbos.ps example from groff /usr/local/share/examples/groff/hdtbl/rainbow.ps)
+#+END_SRC
+** Nstall EITHER the pinentry binary or the source.
+   For the source install, consider editing the Makefile to change =--enable-gtk2=
+   to =--disable-gtk2=, then run... I tried to disable
+   gtk2, and then it would not compile regardless of how I
+   set the Makefile...
+   #+BEGIN_SRC SHELL
+cd /usr/ports/security/pinentry
+## edit the Make file 
+make install
+#+END_SRC
+
+   For binary install:
+#+BEGIN_SRC SHELL
+export PKG_PATH=ftp://ftp.openbsd.org/pub/OpenBSD/5.6/packages/`machine -a`/
+pkg_add pinentry
+#+END_SRC
+** Add "USE_SYSTRACE=Yes" to the empty file =/etc/mk.conf=
+** X11 makes it much easier to install OpenBSD. I have newer notes on the MacPro FTP.
+   If you did not install
+   the =x*= packages when installing OpenBSD, it is easiest to
+   reinstall OpenBSD.
+
+* Basic Tasks
+** network and wifi
+*** connect to wifi
+My device is listed at =athn0= in the output of =ifconfig=.
+
+
+If you have already connected to the wifi connection before, you can see the info like this
+#+BEGIN_SRC SHELL
+nwid Verizon-1234-1234
+wpakey f3354f64
+dhcp
+#+END_SRC
+
+To list available wifi connections (assuming that your interface is called =athn0=):
+#+BEGIN_SRC SHELL
+ifconfig athn0 scan
+# (now wait 5 seconds)
+#+END_SRC
+
+
+Use the NETID from the list. The trick was to not add the "-" prefix to the command line options--This is BSD, not Linux:
+#+BEGIN_SRC SHELL
+## ifconfig athn0 nwid NETID wpa PASSWORD
+##ifconfig athn0 nwid Verizon-12341234 wpakey THEPASSWORD
+# THE \& shows how to enter the wifi network name if you put a '&' in the name
+ifconfig athn0 nwid WIFI\&NAME wpakey THEPASSWORD
+ifconfig athn0 up
+#+END_SRC
+
+After connecting, you might need to run
+#+BEGIN_SRC SHELL
+dhclient athn0
+#+END_SRC
+
+
+#+BEGIN_SRC SHELL
+#+END_SRC
+
+*** Install Python 3.4
+#+BEGIN_SRC SHELL
+# ports version of the install
+cd /usr/ports/lang/3.4
+make install
+#+END_SRC
+ 
+*** Install GPG
+#+BEGIN_SRC SHELL
+ftp ftp://ftp.openbsd.org/pub/OpenBSD/5.6/ports.tar.gz
+export PKG_PATH=ftp://ftp.openbsd.org/pub/OpenBSD/5.6/packages/amd64/
+gnupg 2.1 readme in /usr/local/share/doc/gnupg
+#+END_SRC
+
+** pkg and ports manager (install/add)
+*** The update philosophy
+The default way to use OpenBSD is to install it, then upgrade packages when the new release is ready.  An alternative is to use the ports method of updating (using source code to make updates). The recommended way is to use =pkg_add= to add packages--and the packages are all the same until the next release.
+
+*** =pkg_add= binary installs
+**** install (binary) packages after new install:
+
+A normal install would use binary packages because they are far faster than compiling from source.  With my experimental GPG 2.1 OpenBSD, I installed everything as source in the event that it was needed to compile the dependencis of GnuPG 2.1.  If the binary approach is used, here are some possible things to install.  There might be options for =no_x11= somewhere, for emacs, you will be prompted for the correct version -- choose the won for no x11.
+#+BEGIN_SRC SHELL
+pkg_add vim
+pkg_add bzip2
+pkg_add lynx
+# choose the emacs that says 'no_x11'
+pkg_add emacs
+pkg_add tor
+pkg_add torsocks
+pkg_add python #choose 3.4 or whatever the newest is
+#+END_SRC
+
+Tor installed an auto-start script in: /etc/rc.d/tor
+to run tor, open tmux, split the pane, then type tor.
+try "torsocks lynx". it listens on port 9050
+
+**** list installed packages:
+List all of the installed, binary packages:
+=pkg_info -A=
+
+Show long info
+=pkg_info -d=
+
+Find packages that contain a filename:
+=pkg_info -E filename=
+
+
+*** ports (source code programs) setup
+**** WARNING
+DO NOT MIX UP YOUR SYSTEM AND CONTRIB PORTS TREES. SEE  www.openbsd.org/faq/ports/ports.html
+
+I was trying to compile GnuPG 2.1, and I compiled a new libiconv file from the Internet because the existing version was not found by my GPG build, then I had to reinstall the OS to fix it.
+
+The general idea is that you download the ENTIRE ports tree to =/usr/ports= and then keep the entire tree up to date.  You go into the subdirectory for the program that you want and run =./configure=, =make=, =make install= with root privileges.
+
+
+**** Details for configuring
+For a high-level introduction, see =man ports=, but for the details, see the man page for =bsd.port.mk=.  The =man ports= page describes how to sen environment variables to select the FLAVORS:
+
+#+BEGIN_SRC SHELL
+cd /usr/ports/editors/emacs
+enc FLAVOR=no_x11 make install
+#+END_SRC
+
+The =man bsd.port.mk= file lists the =targets=, such as =install=, =configure=, =fetch=, and many others.  I might use =fetch= to get the downloads without compiling so that I can get fils when I have a fast Internet connection.  The default =CONFIGURE_ARGS= are empty (but the args for =pinentry= or not).  I would guess that you could edit the =Makefile= to change the configure args if you wanted to remove or alter one of the existing args.
+**** Setup
+1) create directory =/usr/ports=
+
+2) add this to =/etc/mk.conf= to ensure that all ports stay in neat directories so that the system is not ruined.
+
+#+BEGIN_SRC SHELL
+USE_SYSTRACE=YES
+#+END_SRC
+
+3) Here are nots from the openbsd.org/faq/ports page
+#+BEGIN_QUOTE
+   On the CD-ROM and mirrors, look for a file named ports.tar.gz. You want to untar this file in the /usr
+   directory, which will create /usr/ports, and all the directories under it. For example:
+
+$ cd /tmp
+$ ftp http://ftp.openbsd.org/pub/OpenBSD/5.5/ports.tar.gz
+$ ftp http://ftp.openbsd.org/pub/OpenBSD/5.5/SHA256.sig
+$ signify -C -p /etc/signify/openbsd-55-base.pub -x SHA256.sig ports.tar.gz
+$ cd /usr
+$ sudo tar xzf /tmp/ports.tar.gz
+
+   The snapshots available on the mirrors are generated daily from the -current ports tree. You will find
+   the snapshots in the pub/OpenBSD/snapshots/ directory. If you are using a snapshot of the ports tree,
+   you should have installed a matching snapshot of OpenBSD. Make sure you keep your ports tree and your
+   OpenBSD system in sync!
+
+   The ports-current tree can be retrieved via:
+     * Anonymous CVS (see link). The command is essentially cvs get ports. You can also use this method to
+       retrieve the tree from a local cvsync mirror.
+     * Download from http://ftp.openbsd.org/pub/OpenBSD/snapshots/ports.tar.gz. This archive is updated
+       nightly.
+     * Your web browser using the CVS web interface.
+
+
+   NOTE: This section introduces some additional global settings for building applications from ports. You
+   can skip this section, but then you will be required to perform many of the make(1) statements in the
+   examples as root.
+#+END_QUOTE
+
+** command line apps -- crash course
+*** ftp
+ftp in OpenBSD should fethc regular HTTP too.  The fetch command might also work:
+
+#+BEGIN_SRC SHELL
+ftp -o mozilla.txt http://mozilla.org 
+58840 bytes received in 1.11 seconds (51.97 KB/s)
+Trying 63.245.215.20...
+Requesting http://mozilla.org
+Redirected to https://www.mozilla.org/
+Trying 63.245.217.105...
+Requesting https://www.mozilla.org/
+Redirected to https://www.mozilla.org/en-US/
+Trying 63.245.217.105...
+Requesting https://www.mozilla.org/en-US/
+#+END_SRC
+
+*** screen/tmux
+Use =tmux= as the screen manager for comand line (instead of GNU scree).
+
+There are *windows* and *panes* in =tmux=.  The names are for windows, so it might be best to put =ssh= sessions in different windows versus diferent panes.
+
+Useful key commands
+
+| key          | function                                                                              |
+|--------------+---------------------------------------------------------------------------------------|
+| C-b c        | Create a new WINDOW                                                                   |
+| C-b n        | Next tmux window                                                                      |
+| C-b p        | Previous window                                                                       |
+| C-b &        | kill a window (use this to kill a remote screen session)                              |
+| C-b C-"      | split screen top/bot                                                                  |
+| C-b C=%      | split scree left/right                                                                |
+| C-b C-o      | rotate the PANES, keeping the cursor in place so that you are editing the new window. |
+| C-b 0-9      | switch to WINDOW number...                                                            |
+| C-b ;        | move the cursor to another window                                                     |
+| C-b C-c      | create a new window                                                                   |
+| C-b t        | show the time in giant numbers                                                        |
+| C-b Esc-DOWN | increase the window by 5 lines by moving the bottome down                             |
+
+*** lynx (web browser)
+install the lynx package or port. Some keys
+
+| KEY   | FUNCTION                                       |
+|-------+------------------------------------------------|
+| C-n   | next line                                      |
+| C-p   | previous line                                  |
+| DOWN  | next link                                      |
+| RIGHT | follow a link to a new page                    |
+| C-u   | clear an edit line (as in a search entry line) |
+| z     | stop a pending connection                      |
+
+*** system info
+**** mount
+Type =mount= to see the list of mounted devices.  The names there will give you an idea of how devices are nmaed on OpenBSD.
+
+OpenBSD 5.6 partitioned my drive into 9 pieces and create separate mounts for =/home=, =tmp=, =/usr= and others.  Many partitions are of type =ffs=.
+**** sysctl (to list disks)
+To see a short list of disk names:
+#+BEGIN_SRC SHELL
+sysctl hw.disknames
+# for for units in MB
+sysctl -pm hw.disknames
+#+END_SRC
+You can just run =sysctl|less= and browse through it or search for =sdo= to find the list.
+
+The =sysctl= command also shows info about the CPU and other hardware.
+**** disklabel
+show brief info about partitions on a disk along with any mount location if mounted:
+#+BEGIN_SRC SHELL
+disklabel sdo
+#+END_SRC
+**** examnple mounts
+=mount /dev/sd2c /mnt/blk16=
+# if it had a UID, it might look somehting like this to mount the i partition:
+=mont 1234a123ab123.i /mnt/mymount=
+**** fdisk
+To list information about your disks, use =fdisk= and point to device names like =sd0=, =sd1=, or maybe =wd0= and =wd1=.
+#+BEGIN_SRC SHELL
+fdisk sd0
+#+END_SRC 
+
+*** format a disk
+use =disklabel= to identify the disk and partition letter to format, then do something like =newfs sd2c= to format the =c= partition on =/dev/sd2=
+
+**** usbdevs
+shows a list of usb devices, like USB sticks or cameras
+**** dump/restore
+these are basic archiving tools to save a copy of your disks.  See openbsd faq14
+
+*** info (man page replacement)
+
+
+| key       | function                                       |
+|-----------+------------------------------------------------|
+| n         | next node (you can accidentally skip subnodes) |
+| p         | previous node                                  |
+| SPACE     | forward/page down within a node                |
+|           | this ensures that you read the whole node      |
+| BACKSPACE | up within a page node                          |
+| [ and ]   | traverse nodes without skipping subnodes       |
+| b         | up within a page node                          |
+| ?         | show basic commands in another window          |
+| C-x 0     | switch windows after you entered ?             |
+| r         | 'read' = follow a link                         |
+| TAB       | go to the next link within this node           |
+| t         | move to the top node                           |
+| d         | move to the directory node                     |
+
+** GPG
+*** install
+I downloaded the file listed below from gnupg.org.
+
+It compiled without downloading the pinentry package. BSD does have a pinentry port, but I downloaded the gnu pinentry, but it had a conflict on libiconv.  
+I had libiconv files, but the configure option did not solve the problem.  I read the Make file for the BSD port and it said that the pinentry is built agains a stripped libassuan, which sounds bad.
+Libiconv is a character set converter -- it sounds simple.
+
+
+this option did not solve the problem: 
+
+=./configure --with-libiconv-prefix=/usr/local/lib/=
+
+neither did this:
+=./configure --with-libiconv-prefix=/usr/local/=
+
+I tried the built in port:
+
+cd /usr/ports/converters/libiconv
+make configure
+
+I was able to install pkg_add pinentry AND GPG2 NOW WORKS. the trick is to use the correct command with the =--full-gen-key --expert= options
+
+but it was already installed, so my command did nothing.
+
+I ruined the source try by installing gnu libiconv over the BSD version.
+
+I downloaded gnu libiconv source,and compiled, but it still didn't work.  I added a link for libiconv.so to the version 7 that I built, didn't work.
+
+To get info on =gpg=, type =info gnupg=
+
+total 11704
+-rw-r--r--  1 root  wheel  3111585 Nov 18 15:04 gnupg-2.1.0.tar.bz2
+-rw-r--r--  1 root  wheel      861 Nov 18 15:05 gnupg-2.1.0.tar.bz2.sig.bz2
+-rw-r--r--  1 root  wheel   516087 Nov 20 01:54 libassuan-2.1.3.tar.bz2
+-rw-r--r--  1 root  wheel      287 Nov 20 01:54 libassuan-2.1.3.tar.bz2.sig.bz2
+-rw-r--r--  1 root  wheel   865272 Nov 18 15:05 libgpg-error-1.17.tar.gz
+-rw-r--r--  1 root  wheel      287 Nov 18 15:06 libgpg-error-1.17.tar.gz.sig.gz
+-rw-r--r--  1 root  wheel   598524 Nov 20 01:53 libksba-1.3.1.tar.bz2
+-rw-r--r--  1 root  wheel      287 Nov 20 01:53 libksba-1.3.1.tar.bz2.sig.bz2
+-rw-r--r--  1 root  wheel   293362 Nov 20 01:52 npth-1.1.tar.bz2
+-rw-r--r--  1 root  wheel      287 Nov 20 01:52 npth-1.1.tar.bz2.sig.bz2
+-rw-r--r--  1 root  wheel   464272 Nov 20 02:51 pinentry-0.9.0.tar.bz2
+-rw-r--r--  1 root  wheel      287 Nov 20 02:52 pinentry-0.9.0.tar.bz2.sig.bz2
+
+*** usage
+**** regular
+The syntax might have changed from the first version.  To generate a key with dialog, use =gpg2 --full-gen-key --expert=. You must use both command-line options exactly as shown.  The old command (=--gen-key=) uses the default options.
+
+=gpg2 --quick-gen-key= is a quick key-creation process.
+**** bath
+the =info gnupg= page section 4.5.1 describes the batch command for keygen.  I think you create a file to contain all the commands.
+
+
+* footer
+#+BEGIN_SRC SHELL
+#+END_SRC
+
+#+BEGIN_SRC SHELL
+#+END_SRC
+
+#+BEGIN_SRC SHELL
+#+END_SRC
