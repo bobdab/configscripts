@@ -8,16 +8,18 @@ fi
 
 # log in as root
 pkg upgrade
-## fix /etc/machine-id file:
-## without the machine-id file, seamonkey and other graphics apps won't work
-dbus-uuidgen --ensure
-pkg install xorg # 321MB install, and it comes with twm and mousepad (graphical text editor)
+
+## These are not needed in PC-BSD:
+#  ## fix /etc/machine-id file:
+#  ## without the machine-id file, seamonkey and other graphics apps won't work
+#  dbus-uuidgen --ensure
+#  pkg install xorg # comes with mousepad
 
 # you do NOT need to install xfce - twm will work good enough for seamonkey
 
 pkg install seamonkey
 pkg install vim-lite
-pkg install xpdf # a tiny pdf reader
+pkg install xpdf # a tiny pdf reader (PC-BSD also has mupdf installed)
 pkg install geeqie # tiny image viewer
 pkg install mousepad 
 
