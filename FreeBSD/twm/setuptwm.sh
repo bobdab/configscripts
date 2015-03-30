@@ -57,5 +57,37 @@ if [ "${yn}" = "y" ]; then
 fi
 
 ## tweak the 'dot-files'
+if [ -f /usr/local/etc/lynx.cfg ]; then
+lynx_tst=$(cat /usr/local/etc/lynx.cfg|grep '^FORCE_COOKIE_PROMPT[:]yes'| head -n 1)
+if [ -z "${lynx_tst}" ]; then
+# I am not indenting because I want my 'here document' to be correct.
+read -p "===== I will now append options to /usr/local/etc/lynx.cfg..."
+lynx_opts="`cat <<EOF
+# Settings added by Bob to reduce all the prompts.
+# Do not use lynx for secure communication with 
+# these settings.
+#
+ALERTSECS:0
+INFOSECS:0
+MESSAGESECS:0
+ALWAYS_RESUBMIT_POSTS:TRUE
+FORCE_COOKIE_PROMPT:yes
+FORCE_SSL_PROMPT:yes
+MAX_COOKIES_DOMAIN:0
+NO_PAUSE:TRUE
+SEND_USERAGENT:OFF
+SET_COOKIES:FALSE
+USE_MOUSE:FALSE
+EOF
+`"
+echo "${lynx_opts}" >> /usr/local/etc/lynx.cfg
+
+fi
+else
+	echo "I did not see the /usr/local/etc/lynx.cfg file where I was "
+	echo "going to put some options to reduce prompts from lynx browser."
+fi
+
+## seamonkey/firefox prefs
 
 
