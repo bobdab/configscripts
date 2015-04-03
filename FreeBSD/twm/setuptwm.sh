@@ -1,26 +1,38 @@
 #!/bin/sh
 
 chk_id=$(id -u)
-if [ "${chk_id}" != "0" ]; then
-	echo "Error. You must run this as root"
-	exit
+
+if [ "${chk_id}" = "0" ]; then
+	echo "You are root, so I will install the browswer, pdf reader, etc."
+
+	# log in as root
+	pkg upgrade
+	## fix /etc/machine-id file:
+	## without the machine-id file, seamonkey and other graphics apps won't work
+	dbus-uuidgen --ensure
+	pkg install xorg # 321MB install, and it comes with twm and mousepad (graphical text editor)
+
+	# you do NOT need to install xfce - twm will work good enough for seamonkey
+
+	pkg install seamonkey
+	pkg install vim-lite
+	pkg install xpdf # a tiny pdf reader
+	pkg install geequie # tiny image viewer
+	pkg install mousepad 
+	pkg install aspell  # for the spell-checker in the browswer and libreoffice
+else
+	echo "You are not root, so I will not install the browswer, pdf reader, etc."
+
 fi
 
-# log in as root
-pkg upgrade
-## fix /etc/machine-id file:
-## without the machine-id file, seamonkey and other graphics apps won't work
-dbus-uuidgen --ensure
-pkg install xorg # 321MB install, and it comes with twm and mousepad (graphical text editor)
+read -p "Do you want to install Python 3? (y/n): " yn
+yn_python=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
+echo "You said ${yn_python}"
 
-# you do NOT need to install xfce - twm will work good enough for seamonkey
-
-pkg install seamonkey
-pkg install vim-lite
-pkg install xpdf # a tiny pdf reader
-pkg install geeqie # tiny image viewer
-pkg install mousepad 
-
+# 3.3 GB so far
+read -p "Do you want to install git? (y/n): " yn
+yn_git=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
+echo "You said ${yn_git}"
 
 
 src_dir=$(dirname "$0")
@@ -38,23 +50,19 @@ if [ "${yn}" = "y" ]; then
 	cp "${src_dir}/.vimrc" "/usr/home/${usr_id}"
 fi
 
-read -p "Do you want to install Python 3? (y/n): " yn
-yn=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
-echo "You said ${yn}"
-if [ "${yn}" = "y" ]; then
-	echo "Installing Python 3..."
-	# the python3 install gets two versions, but the extra
-	pkg install python3
-fi
+## seamonkey/firefox prefs
 
-# 3.3 GB so far
-read -p "Do you want to install git? (y/n): " yn
-yn=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
-echo "You said ${yn}"
-if [ "${yn}" = "y" ]; then
-	echo "Installing git..."
-	pkg install git
-fi
+dir=$(dirname "$0")
+src_prefs="${dir}/seamonkey-prefs.js"
+
+prefs=$(find /usr/home/${usr_id}/.mozilla -name 'prefs[.]js')
+echo "flist is ${prefs}"
+
+for f in $(echo "${prefs}"); do
+	d=$(dirname "${f}")
+	echo "copy from ${f} to ${d}"
+done
+
 
 ## tweak the 'dot-files'
 if [ -f /usr/local/etc/lynx.cfg ]; then
@@ -88,6 +96,15 @@ else
 	echo "going to put some options to reduce prompts from lynx browser."
 fi
 
-## seamonkey/firefox prefs
+# python install (the prompt was up top)
+if [ "${yn_python}" = "y" ]; then
+	echo "Installing Python 3..."
+	# the python3 install gets two versions, but the extra
+	pkg install python3
+fi
 
-
+# Install git (the prompt was up top).
+if [ "${yn_git}" = "y" ]; then
+	echo "Installing git..."
+	pkg install git
+fi

@@ -2,6 +2,10 @@
 alias vi='vim'
 alias lsl='ls -lotrG|tail -n 20'
 alias ls='ls -G'
+
+# a simple command prompt:
+PS1=" \u\$ "
+
 # linux:
 #LS_COLORS='di=1;31;42:fi=5:ln=31:pi=5:so=5:bd=5:cd=5:or=31:mi=0:ex=35:*.rpm=90'
 #
