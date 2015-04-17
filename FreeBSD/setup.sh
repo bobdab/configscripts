@@ -4,17 +4,92 @@ chk_id=$(id -u)
 
 yn_python='n'
 yn_git='n'
+yn_seamonkey='n'
+yn_R='n'
+yn_texlive='n'
+yn_duplicity='n'
 
 read -p "Setup type (twm or fluxbox): " dm
 
 if [ "${chk_id}" = "0" ]; then
+
+	if [ -f /usr/local/etc/lynx.cfg ]; then
+	lynx_tst=$(cat /usr/local/etc/lynx.cfg|grep '^FORCE_COOKIE_PROMPT[:]yes'| head -n 1)
+	if [ -z "${lynx_tst}" ]; then
+	# I am not indenting because I want my 'here document' to be correct.
+
+	read -p "===== I will now append options to /usr/local/etc/lynx.cfg..."
+	lynx_opts="`cat <<EOF
+# Settings added by Bob to reduce all the prompts.
+# Do not use lynx for secure communication with 
+# these settings.
+#
+ALERTSECS:0
+INFOSECS:0
+MESSAGESECS:0
+ALWAYS_RESUBMIT_POSTS:TRUE
+FORCE_COOKIE_PROMPT:yes
+FORCE_SSL_PROMPT:yes
+MAX_COOKIES_DOMAIN:0
+NO_PAUSE:TRUE
+SEND_USERAGENT:OFF
+SET_COOKIES:FALSE
+USE_MOUSE:FALSE
+EOF
+`"
+	echo "${lynx_opts}" >> /usr/local/etc/lynx.cfg
+		
+	fi
+	else
+		echo "I did not see the /usr/local/etc/lynx.cfg file where I was "
+		echo "going to put some options to reduce prompts from lynx browser."
+	fi
+
+	# --------------------
 	read -p "You are root.  Do you want to install the base set of packages? (y/n): " yn
 
 	if [ "${yn}" = "y" ]; then
 		# run the installs
+		if [ ! -d /usr/ports/security ]; then
+			echo "The ports library is not installed.  This is used to install programs "
+			echo "from source files (as opposed to binary installs)."
+			read -p "Do you want to install the ports library." yn
+			yn_ports=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
+		fi
+
+		read -p "Do you want to install the initial programs using PORTS (y/n): " yn
+		yn_use_ports=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
+		if [ "${yn_use_ports}" = 'y' ]; then
+			USE_PORTS='y'
+		else
+			USE_PORTS='n'
+		fi
+
+
+		read -p "Do you want to install natural message command line client? (y/n): " yn
+		yn_natmsg=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
+		echo "You said ${yn_natmsg}"
+
+		read -p "Do you want to install texlive base? (y/n): " yn
+		yn_texlive=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
+		echo "You said ${yn_texlive}"
+
+		read -p "Do you want to install seamonkey web browser? (y/n): " yn
+		yn_seamonkey=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
+		echo "You said ${yn_seamonkey}"
+
+		read -p "Do you want to install Python 3? (y/n): " yn
+		yn_python=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
+		echo "You said ${yn_python}"
+
+		read -p "Do you want to install git? (y/n): " yn
+		yn_git=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
+		echo "You said ${yn_git}"
+
+		read -p "Do you want to install duplicity (also needs python 2.7)? (y/n): " yn
+		yn_duplicity=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
+		echo "You said ${yn_duplicity}"
 		
-		# log in as root
-		pkg upgrade
 
 		## These are not needed in PC-BSD:
 		#  ## fix /etc/machine-id file:
@@ -24,64 +99,70 @@ if [ "${chk_id}" = "0" ]; then
 
 		# you do NOT need to install xfce - twm will work good enough for seamonkey
 
-		pkg install wget
-		pkg install xpdf # a tiny pdf reader (PC-BSD also has mupdf installed)
-		pkg install geequie # tiny image viewer
-		pkg install mousepad 
-		pkg install aspell 
-		if [ "${dm}" = 'twm' ]; then
-			pkg install seamonkey
-			pkg install vim # or vim.tiny?
-		else
-			pkg install vim-lite # or vim.tiny?
-		fi
+		if [ "${USE_PORTS}" = 'n' ]; then
+			echo "Using binary installs..."
+			# log in as root
+			pkg upgrade
 
-		# refresh the package
-		wget https://github.com/bobdab/configscripts/archive/master.tar.gz
+			pkg install wget
+			pkg install xpdf # a tiny pdf reader (PC-BSD also has mupdf installed)
+			pkg install geeqie # tiny image viewer
+			pkg install mousepad 
+			pkg install aspell 
+			if [ "${dm}" = 'twm' ]; then
+				pkg install seamonkey
+				pkg install vim-lite # or vim.tiny?
+			else
+				pkg install vim-lite # or vim.tiny?
+			fi
+		else:
+			cd /usr/ports/ftp/wget
+			make
+			make install
+
+			cd /usr/ports/graphics/xpdf
+			make
+			make install
+
+			cd /usr/ports/graphics/geeqie
+			make
+			make install
+
+			cd /usr/ports/editors/mousepad
+			make
+			make install
+
+			cd /usr/ports/textproc/aspell
+			make
+			make install
+
+			if [ "${dm}" = 'twm' ]; then
+				cd /usr/ports/www/seamonkey
+				make
+				make install
+
+				cd /usr/ports/editors/vim
+				make
+				make install
+			else
+				# vim tiny
+				cd /usr/ports/editors/vim
+				make
+				make install
+			fi
+
+		# Refresh the package
+		#wget https://github.com/bobdab/configscripts/archive/master.tar.gz
+		curl -L https://github.com/bobdab/configscripts/archive/master.tar.gz -O
 		rm ../../master.tar.gz
 		mv master.tar.gz ../..
 		#unzip master.tar.gz
 		#tar -xf master.tar
 
-		read -p "Do you want to install Python 3? (y/n): " yn
-
-		yn_python=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
-		echo "You said ${yn_python}"
-
-		read -p "Do you want to install git? (y/n): " yn
-		yn_git=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
-		echo "You said ${yn_git}"
-
-		if [ -f /usr/local/etc/lynx.cfg ]; then
-		lynx_tst=$(cat /usr/local/etc/lynx.cfg|grep '^FORCE_COOKIE_PROMPT[:]yes'| head -n 1)
-		if [ -z "${lynx_tst}" ]; then
-		# I am not indenting because I want my 'here document' to be correct.
-
-		read -p "===== I will now append options to /usr/local/etc/lynx.cfg..."
-		lynx_opts="`cat <<EOF
-	# Settings added by Bob to reduce all the prompts.
-	# Do not use lynx for secure communication with 
-	# these settings.
-	#
-	ALERTSECS:0
-	INFOSECS:0
-	MESSAGESECS:0
-	ALWAYS_RESUBMIT_POSTS:TRUE
-	FORCE_COOKIE_PROMPT:yes
-	FORCE_SSL_PROMPT:yes
-	MAX_COOKIES_DOMAIN:0
-	NO_PAUSE:TRUE
-	SEND_USERAGENT:OFF
-	SET_COOKIES:FALSE
-	USE_MOUSE:FALSE
-	EOF
-	`"
-		echo "${lynx_opts}" >> /usr/local/etc/lynx.cfg
-		
-		fi
-		else
-					echo "I did not see the /usr/local/etc/lynx.cfg file where I was "
-					echo "going to put some options to reduce prompts from lynx browser."
+		# ----------------------------------
+		ntp_tst=$(cat /etc/rc.conf|grep '^ntpd_enable"'| head -n 1)
+		if [ -z "${ntp_tst}" ]; then
+			echo 'ntpd_enable="YES"' >> /etc/rc.conf
 		fi
 	
 	fi
@@ -128,6 +209,15 @@ if [ "${yn}" = "y" ]; then
 	# - - -  
 fi
 
+if [ "${yn_seamonkey}" = "y" ]; then
+	echo "Installing seamonkey..."
+	pkg install seamonkey
+fi
+
+if [ "${yn_R}" = "y" ]; then
+	echo "Installing R"
+	pkg install R
+fi
 
 if [ "${yn_python}" = "y" ]; then
 	echo "Installing Python 3..."
@@ -140,6 +230,38 @@ if [ "${yn_git}" = "y" ]; then
 	pkg install git
 fi
 
+if [ "${yn_duplicity}" = "y" ]; then
+	echo "Installing duplicity ..."
+	# the duplicity install gets two versions, but the extra
+	pkg install duplicity
+fi
+
+if [ "${yn_texlive}" = "y" ]; then
+	echo "Installing texlive base..."
+	pkg install texlive-base
+fi
 ## tweak the 'dot-files'
 
 
+# the dbus-uuidgen program is not in the minimal
+# Freebsd install, but it should be here after the 
+# the programs above have been installed.
+# Without the UUID that this program creates,
+# graphical programs like web browsers won't work.
+dbus-uuidgen --ensure
+
+#
+
+
+usr_id='super'
+
+dir=$(dirname "$0")
+src_prefs="${dir}/common/seamonkey-prefs.js"
+
+prefs=$(find /usr/home/${usr_id}/.mozilla -name 'prefs[.]js')
+echo "list of mozilla prefs.js files to be updated is: ${prefs}"
+
+for f in $(echo "${prefs}"); do
+	d=$(dirname "${f}")
+	echo "Copying mozilla/firefox/seamonkey prefs from ${f} to ${d}"
+done
