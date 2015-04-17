@@ -14,12 +14,15 @@ read -p "Setup type (twm or fluxbox): " dm
 if [ "${chk_id}" = "0" ]; then
 
 	if [ -f /usr/local/etc/lynx.cfg ]; then
-	lynx_tst=$(cat /usr/local/etc/lynx.cfg|grep '^FORCE_COOKIE_PROMPT[:]yes'| head -n 1)
-	if [ -z "${lynx_tst}" ]; then
-	# I am not indenting because I want my 'here document' to be correct.
+		lynx_tst=$(cat /usr/local/etc/lynx.cfg|grep '^FORCE_COOKIE_PROMPT[:]yes'| head -n 1)
 
-	read -p "===== I will now append options to /usr/local/etc/lynx.cfg..."
-	lynx_opts="`cat <<EOF
+		if [ -n "${lynx_tst}" ]; then
+			# my custom options are not in the lynx config file, 
+			# so add them.
+			# I am not indenting because I want my 'here document' to be correct.
+
+			read -p "===== I will now append options to /usr/local/etc/lynx.cfg..."
+			lynx_opts="`cat <<EOF
 # Settings added by Bob to reduce all the prompts.
 # Do not use lynx for secure communication with 
 # these settings.
@@ -37,9 +40,8 @@ SET_COOKIES:FALSE
 USE_MOUSE:FALSE
 EOF
 `"
-	echo "${lynx_opts}" >> /usr/local/etc/lynx.cfg
+		echo "${lynx_opts}" >> /usr/local/etc/lynx.cfg
 		
-	fi
 	else
 		echo "I did not see the /usr/local/etc/lynx.cfg file where I was "
 		echo "going to put some options to reduce prompts from lynx browser."
