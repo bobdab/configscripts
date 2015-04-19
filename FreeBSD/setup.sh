@@ -69,6 +69,10 @@ EOF
 		fi
 
 
+		read -p "Do you want user: ${usr_id} to of root privileges? (y/n): " yn
+		yn_priv=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
+		echo "You said ${yn_priv}"
+
 		read -p "Do you want to xorg (graphical desktop)? (y/n): " yn
 		yn_xorg=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
 		echo "You said ${yn_xorg}"
@@ -271,7 +275,6 @@ dbus-uuidgen --ensure
 #
 
 
-usr_id='super'
 
 dir=$(dirname "$0")
 src_prefs="${dir}/common/seamonkey-prefs.js"
@@ -280,6 +283,16 @@ prefs=$(find /usr/home/${usr_id}/.mozilla -name 'prefs[.]js')
 echo "list of mozilla prefs.js files to be updated is: ${prefs}"
 
 for f in $(echo "${prefs}"); do
+	chown "${usr_id}:${usr_id}" "${$f}"
 	d=$(dirname "${f}")
 	echo "Copying mozilla/firefox/seamonkey prefs from ${f} to ${d}"
+	cp "${f}" "${d}/prefs.js"
+	# put a copy in the users home dir just in case
+	cp "${f}" "/usr/home/${usr_id}/"
 done
+
+
+# admin/root privileges for the user
+if [ "${yn_priv}" = "y" ]; then
+	pw usermod "${usr_id}" -G wheel
+fi
