@@ -40,11 +40,12 @@ SET_COOKIES:FALSE
 USE_MOUSE:FALSE
 EOF
 `"
-		echo "${lynx_opts}" >> /usr/local/etc/lynx.cfg
+			echo "${lynx_opts}" >> /usr/local/etc/lynx.cfg
 		
-	else
-		echo "I did not see the /usr/local/etc/lynx.cfg file where I was "
-		echo "going to put some options to reduce prompts from lynx browser."
+		else
+			echo "I did not see the /usr/local/etc/lynx.cfg file where I was "
+			echo "going to put some options to reduce prompts from lynx browser."
+		fi
 	fi
 
 	# --------------------
@@ -59,7 +60,7 @@ EOF
 			yn_ports=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
 		fi
 
-		read -p "Do you want to install the initial programs using PORTS (y/n): " yn
+		read -p "Do you want to install the initial programs using PORTS source code (y/n): " yn
 		yn_use_ports=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
 		if [ "${yn_use_ports}" = 'y' ]; then
 			USE_PORTS='y'
@@ -67,6 +68,10 @@ EOF
 			USE_PORTS='n'
 		fi
 
+
+		read -p "Do you want to xorg (graphical desktop)? (y/n): " yn
+		yn_xorg=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
+		echo "You said ${yn_xorg}"
 
 		read -p "Do you want to install natural message command line client? (y/n): " yn
 		yn_natmsg=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
@@ -106,18 +111,22 @@ EOF
 			# log in as root
 			pkg upgrade
 
-			pkg install wget
-			pkg install xpdf # a tiny pdf reader (PC-BSD also has mupdf installed)
-			pkg install geeqie # tiny image viewer
-			pkg install mousepad 
-			pkg install aspell 
+			if [ "${yn_xorg}" = 'y' ]; then
+				echo "y"|pkg install xorg
+			fi
+			echo "y"|pkg install wget
+			echo "y"|pkg install xpdf # a tiny pdf reader (PC-BSD also has mupdf installed)
+			echo "y"|pkg install geeqie # tiny image viewer
+			echo "y"|pkg install mousepad 
+			echo "y"|pkg install aspell 
 			if [ "${dm}" = 'twm' ]; then
-				pkg install seamonkey
-				pkg install vim-lite # or vim.tiny?
+				echo "y"|pkg install seamonkey
+				echo "y"|pkg install vim-lite # or vim.tiny?
 			else
-				pkg install vim-lite # or vim.tiny?
+				echo "y"|pkg install vim-lite # or vim.tiny?
 			fi
 		else:
+			# use ports/source code to install
 			cd /usr/ports/ftp/wget
 			make
 			make install
@@ -153,23 +162,21 @@ EOF
 				make install
 			fi
 
-		# Refresh the package
-		#wget https://github.com/bobdab/configscripts/archive/master.tar.gz
-		curl -L https://github.com/bobdab/configscripts/archive/master.tar.gz -O
-		rm ../../master.tar.gz
-		mv master.tar.gz ../..
-		#unzip master.tar.gz
-		#tar -xf master.tar
+			# Refresh the package
+			#wget https://github.com/bobdab/configscripts/archive/master.tar.gz
+			curl -L https://github.com/bobdab/configscripts/archive/master.tar.gz -O
+			rm ../../master.tar.gz
+			mv master.tar.gz ../..
+			#unzip master.tar.gz
+			#tar -xf master.tar
 
-		# ----------------------------------
-		ntp_tst=$(cat /etc/rc.conf|grep '^ntpd_enable"'| head -n 1)
-		if [ -z "${ntp_tst}" ]; then
-			echo 'ntpd_enable="YES"' >> /etc/rc.conf
+			# ----------------------------------
+			ntp_tst=$(cat /etc/rc.conf|grep '^ntpd_enable"'| head -n 1)
+			if [ -z "${ntp_tst}" ]; then
+				echo 'ntpd_enable="YES"' >> /etc/rc.conf
+			fi
 		fi
-	
 	fi
-
-
 fi
 
 
@@ -186,14 +193,23 @@ if [ "${yn}" = "y" ]; then
 
 	if [ "${dm}" = "twm" ]; then
 		# src_dir is the directory from which this script runs
+		# I do not set the group ID due to the possibility that
+		# it is different from the user, and I want to avoid a 
+		# complete failure.
+		chown "${usr_id}" "${src_dir}/twm/xinitrc" 
+		chown "${usr_id}" "${src_dir}/common/.vimrc" 
 		cp "${src_dir}/twm/xinitrc" /usr/local/etc/X11/xinit
 		cp "${src_dir}/common/.vimrc" "/usr/home/${usr_id}"
+		cp "${src_dir}/common/*" "/usr/home/${usr_id}"
 	fi
 
 	if [ "${dm}" = "fluxbox" ]; then
 		# src_dir is the directory from which this script runs
+		chown "${usr_id}" "${src_dir}/fluxbox/xtermgo.sh" /usr/local/etc/X11/xinit
+		chown "${usr_id}" "${src_dir}/fluxbox/.profile" "/usr/home/${usr_id}"
 		cp "${src_dir}/fluxbox/xtermgo.sh" /usr/local/etc/X11/xinit
 		cp "${src_dir}/fluxbox/.profile" "/usr/home/${usr_id}"
+		cp "${src_dir}/common/*" "/usr/home/${usr_id}"
 	fi
 	# - - -  seamonkey prefs
 	dir=$(dirname "$0")
@@ -213,34 +229,34 @@ fi
 
 if [ "${yn_seamonkey}" = "y" ]; then
 	echo "Installing seamonkey..."
-	pkg install seamonkey
+	echo "y"|pkg install seamonkey
 fi
 
 if [ "${yn_R}" = "y" ]; then
 	echo "Installing R"
-	pkg install R
+	echo "y"|pkg install R
 fi
 
 if [ "${yn_python}" = "y" ]; then
 	echo "Installing Python 3..."
 	# the python3 install gets two versions, but the extra
-	pkg install python3
+	echo "y"|pkg install python3
 fi
 
 if [ "${yn_git}" = "y" ]; then
 	echo "Installing git..."
-	pkg install git
+	echo "y"|pkg install git
 fi
 
 if [ "${yn_duplicity}" = "y" ]; then
 	echo "Installing duplicity ..."
 	# the duplicity install gets two versions, but the extra
-	pkg install duplicity
+	echo "y"|pkg install duplicity
 fi
 
 if [ "${yn_texlive}" = "y" ]; then
 	echo "Installing texlive base..."
-	pkg install texlive-base
+	echo "y"|pkg install texlive-base
 fi
 ## tweak the 'dot-files'
 
