@@ -123,6 +123,9 @@ EOF
 			echo "y"|pkg install geeqie # tiny image viewer
 			echo "y"|pkg install mousepad 
 			echo "y"|pkg install aspell 
+			echo "y"|pkg install aspell-ispell
+			echo "y"|pkg install unrtf 
+			echo "y"|pkg install xournal 
 			if [ "${dm}" = 'twm' ]; then
 				echo "y"|pkg install seamonkey
 				echo "y"|pkg install vim-lite # or vim.tiny?
