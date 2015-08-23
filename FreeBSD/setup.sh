@@ -10,6 +10,7 @@
 #    pkg install wget
 #    # get my setup script
 #    wget --no-check-certificate https://raw.githubusercontent.com/bobdab/configscripts/master/FreeBSD/setup.sh
+#    chmod 755 setup.sh
 #    ./setup.sh
 #
 #    # do i need to add an entry to /etc/hosts for the host name to avoid the
@@ -99,7 +100,7 @@ EOF
 
         read -p "Do you want to add and configure a regular user ID? (y/n) " yn_add_user
         while [ -z "${usr_id}" ]; do
-            if [ "${yn_use_ports}" = 'y' ]; then
+            if [ "${yn_add_user}" = 'y' ]; then
                 read -p "Enter user ID to add and configure: " usr_id
             fi
 
