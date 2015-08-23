@@ -1,5 +1,33 @@
 #!/bin/sh
 
+# after the initial install of FreeBSD 10.2, try these commands to 
+# get packages working:
+
+#    # log in as root
+#    see if the internet works:
+#    ping -c 1 yahoo.com
+#    pkg update && pkg upgrade
+#    pkg install wget
+#    # get my setup script
+#    wget --no-check-certificate https://raw.githubusercontent.com/bobdab/configscripts/master/FreeBSD/setup.sh
+#    ./setup.sh
+#
+#    # do i need to add an entry to /etc/hosts for the host name to avoid the
+#    # hang during boot?
+#
+#    ## After installing Xorg and other things, the script below
+#    ## will fix the /etc/machine-id file so that graphics programs will work
+#    ## (at least this was needed in FreeBSD 10.1).
+#    dbus-uuidgen --ensure
+#
+#    # for video resolution, see what is available for your hardware:
+#    vidcontrol -i mode
+#    # try loading this to change modes:
+#    kldload vesa
+#    vidcontrol MODE_279
+
+
+
 chk_id=$(id -u)
 
 yn_python='n'
@@ -69,11 +97,22 @@ EOF
 		fi
 
 
-		read -p "Do you want user: ${usr_id} to of root privileges? (y/n): " yn
-		yn_priv=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
-		echo "You said ${yn_priv}"
+        read -p "Do you want to add and configure a regular user ID? (y/n) " yn_add_user
+        while [ -z "${usr_id}" ]; do
+            if [ "${yn_use_ports}" = 'y' ]; then
+                read -p "Enter user ID to add and configure: " usr_id
+            fi
 
-		read -p "Do you want to xorg (graphical desktop)? (y/n): " yn
+            if [ -n "${usr_id}" ]; then
+                read -p "Do you want user: ${usr_id} to have root privileges? (y/n): " yn
+                yn_priv=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
+                echo "You said ${yn_priv}"
+            else
+                yn_priv="n"
+            fi
+        done
+
+		read -p "Do you want to install xorg (graphical desktop)? (y/n): " yn
 		yn_xorg=$(echo "${yn}"|tr "[[:upper:]]" "[[:lower:]]")
 		echo "You said ${yn_xorg}"
 
@@ -110,45 +149,27 @@ EOF
 
 		# you do NOT need to install xfce - twm will work good enough for seamonkey
 
-		if [ "${USE_PORTS}" = 'n' ]; then
-			echo "Using binary installs..."
-			# log in as root
-			pkg upgrade
-
-			if [ "${yn_xorg}" = 'y' ]; then
-				echo "y"|pkg install xorg
-			fi
-			echo "y"|pkg install wget
-			echo "y"|pkg install xpdf # a tiny pdf reader (PC-BSD also has mupdf installed)
-			echo "y"|pkg install geeqie # tiny image viewer
-			echo "y"|pkg install mousepad 
-			echo "y"|pkg install aspell 
-			echo "y"|pkg install aspell-ispell
-			echo "y"|pkg install unrtf 
-			echo "y"|pkg install xournal 
-			if [ "${dm}" = 'twm' ]; then
-				echo "y"|pkg install seamonkey
-				echo "y"|pkg install vim-lite # or vim.tiny?
-			else
-				echo "y"|pkg install vim-lite # or vim.tiny?
-			fi
-		else:
+		if [ "${USE_PORTS}" = 'y' ]; then
 			# use ports/source code to install
+            echo "Installing from ports source code"
+            read -p "Press ENTER to continue..." junk
 			cd /usr/ports/ftp/wget
 			make
 			make install
 
-			cd /usr/ports/graphics/xpdf
-			make
-			make install
+			if [ "${yn_xorg}" = 'y' ]; then
+		        cd /usr/ports/graphics/xpdf
+		        make
+		        make install
 
-			cd /usr/ports/graphics/geeqie
-			make
-			make install
+		        cd /usr/ports/graphics/geeqie
+		        make
+		        make install
 
-			cd /usr/ports/editors/mousepad
-			make
-			make install
+		        cd /usr/ports/editors/mousepad
+		        make
+		        make install
+            fi
 
 			cd /usr/ports/textproc/aspell
 			make
@@ -182,11 +203,35 @@ EOF
 			if [ -z "${ntp_tst}" ]; then
 				echo 'ntpd_enable="YES"' >> /etc/rc.conf
 			fi
+    
+        else
+			echo "Using binary installs..."
+            read -p "Press ENTER to continue..." junk
+			# log in as root
+			pkg upgrade
+
+			if [ "${yn_xorg}" = 'y' ]; then
+				echo "y"|pkg install xorg
+			    echo "y"|pkg install xpdf # a tiny pdf reader (PC-BSD also has mupdf installed)
+			    echo "y"|pkg install geeqie # tiny image viewer
+			    echo "y"|pkg install fpc-imagemagick # command-line image manipulator
+			    echo "y"|pkg install mousepad 
+			fi
+			echo "y"|pkg install wget
+			echo "y"|pkg install aspell 
+			echo "y"|pkg install aspell-ispell
+			echo "y"|pkg install unrtf 
+			echo "y"|pkg install xournal 
+			if [ "${dm}" = 'twm' ]; then
+				echo "y"|pkg install seamonkey
+				echo "y"|pkg install vim-lite # or vim.tiny?
+			else
+				echo "y"|pkg install vim-lite # or vim.tiny?
+			fi
+		else:
 		fi
 	fi
 fi
-
-
 
 ################################# configure user
 read -p "enter the user ID to configure: " usr_id
