@@ -215,6 +215,7 @@ EOF
 				echo "y"|pkg install xorg
 			    echo "y"|pkg install xpdf # a tiny pdf reader (PC-BSD also has mupdf installed)
 			    echo "y"|pkg install geeqie # tiny image viewer
+			    echo "y"|pkg install fvwm #desktop
 			    echo "y"|pkg install fpc-imagemagick # command-line image manipulator
 			    echo "y"|pkg install mousepad 
 			fi
