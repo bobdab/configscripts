@@ -4,17 +4,25 @@
 # get packages working:
 
 #    # log in as root
-#    see if the internet works:
+#    # the script will do this: pkg update && pkg upgrade
+#    # verify if the internet works:
 #    ping -c 1 yahoo.com
-#    pkg update && pkg upgrade
 #    pkg install wget
 #    # get my setup script
-#    wget --no-check-certificate https://raw.githubusercontent.com/bobdab/configscripts/master/FreeBSD/setup.sh
+#    ## wget --no-check-certificate https://raw.githubusercontent.com/bobdab/configscripts/master/FreeBSD/setup.sh
+#    # use the short link to ge the setup script:
+#    wget --no-check-certificate https://tinyurl.com/nkq4bn3
+#    mv nkq4bn3 setup.sh
 #    chmod 755 setup.sh
 #    ./setup.sh
 #
-#    # do i need to add an entry to /etc/hosts for the host name to avoid the
-#    # hang during boot?
+#    # During boot, I get a message about my unqualified host name not found.
+#    # I press Ctl-c to kill that and continue the boot process.
+#    # I tried adding a line like the following 
+#    # to /etc/hosts (where ABCD is my hostname):
+#    127.0.0.1 ABCD
+#    #... but that did not fix the problem.
+#   
 #
 #    ## After installing Xorg and other things, the script below
 #    ## will fix the /etc/machine-id file so that graphics programs will work
