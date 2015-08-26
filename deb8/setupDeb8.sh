@@ -3,6 +3,9 @@
 ###############################################################################
 # My personal setup script for Debia 8 desktop.
 # Setup and installation on Debian 8.1 AMD-64 with Cinamon desktop.
+#
+#
+#   wget --no-check-certificate https://raw.githubusercontent.com/bobdab/configscripts/master/deb8/setupDeb8.sh
 ###############################################################################
 # To find programs and files in debian
 # apt-cache search PROGRAM_NAME

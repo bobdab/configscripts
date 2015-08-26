@@ -1,0 +1,18 @@
+# 
+
+# deb cdrom:[Debian GNU/Linux 8 _Jessie_ - Official Snapshot amd64 LIVE/INSTALL Binary 20150606-15:24]/ jessie main
+
+# deb cdrom:[Debian GNU/Linux 8 _Jessie_ - Official Snapshot amd64 LIVE/INSTALL Binary 20150606-15:24]/ jessie main contrib non-free
+
+# bob added contrib non-free
+deb     http://debian.gtisc.gatech.edu/debian/ jessie main contrib non-free
+deb-src http://debian.gtisc.gatech.edu/debian/ jessie main contrib non-free
+
+deb     http://debian.gtisc.gatech.edu/debian/ jessie-updates main contrib non-free
+deb-src http://debian.gtisc.gatech.edu/debian/ jessie-updates main contrib non-free
+
+# bob added multimedia
+deb ftp://ftp.deb-multimedia.org jessie main non-free
+
+deb http://security.debian.org/ jessie/updates main contrib non-free
+deb-src http://security.debian.org/ jessie/updates main
