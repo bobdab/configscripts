@@ -16,6 +16,10 @@
 #    chmod 755 setup.sh
 #    ./setup.sh
 #
+#    # Remember that if you want to access root from a regular
+#    # user ID, this script will run something like this (for uid super):
+#       pw usermod "${usr_id}" -G wheel
+#
 #    # During boot, I get a message about my unqualified host name not found.
 #    # I press Ctl-c to kill that and continue the boot process.
 #    # I tried adding a line like the following 
@@ -164,39 +168,44 @@ EOF
             read -p "Press ENTER to continue..." junk
 			cd /usr/ports/ftp/wget
 			make
-			make install
+			make install BATCH=yes
 
 			if [ "${yn_xorg}" = 'y' ]; then
 		        cd /usr/ports/graphics/xpdf
 		        make
-		        make install
+		        make install BATCH=yes
 
 		        cd /usr/ports/graphics/geeqie
 		        make
-		        make install
+		        make install BATCH=yes
 
 		        cd /usr/ports/editors/mousepad
 		        make
-		        make install
+		        make install BATCH=yes
             fi
+
+            # libreofice uses hunspell
+			cd /usr/ports/textproc/hunspell
+			make
+			make install BATCH=yes
 
 			cd /usr/ports/textproc/aspell
 			make
-			make install
+			make install BATCH=yes
 
 			if [ "${dm}" = 'twm' ]; then
 				cd /usr/ports/www/seamonkey
 				make
-				make install
+				make install BATCH=yes
 
 				cd /usr/ports/editors/vim
 				make
-				make install
+				make install BATCH=yes
 			else
 				# vim tiny
 				cd /usr/ports/editors/vim
 				make
-				make install
+				make install BATCH=yes
 			fi
 
 			# Refresh the package
@@ -228,7 +237,9 @@ EOF
 			    echo "y"|pkg install mousepad 
 			fi
 			echo "y"|pkg install wget
-			echo "y"|pkg install aspell 
+            # libreoffice needs hunspell
+			echo "y"|pkg install en-hunspell 
+			echo "y"|pkg install en-aspell 
 			echo "y"|pkg install aspell-ispell
 			echo "y"|pkg install unrtf 
 			echo "y"|pkg install xournal 
@@ -238,7 +249,6 @@ EOF
 			else
 				echo "y"|pkg install vim-lite # or vim.tiny?
 			fi
-		else:
 		fi
 	fi
 fi

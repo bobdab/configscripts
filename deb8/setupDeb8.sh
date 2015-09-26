@@ -82,6 +82,12 @@ apt-get -y upgrade
 
 apt-get -y install cryptsetup vim emacs lynx wget curl vsftpd
 
+# disable the driver for my apple touchpad because
+# it disconnects every second and floods my log file
+# with shite
+rmmod bcm5974
+echo "rmmod bcm5974" >> ~/.profile
+echo "rmmod bcm5974" >> /home/super/.profile
 # ## I do not use recordmydesktop any more because it won't
 # ## see my Edirol USB microphone, so I use vokoscreen and kdenlive vid editor,
 # ## (note that kdenlive is a giant install)
