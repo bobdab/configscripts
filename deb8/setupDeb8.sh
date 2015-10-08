@@ -174,6 +174,20 @@ apt-get -y install gnucash
 apt-get -y install texlive
 
 ###############################################################################
+# get the infrastructure to verify GPG sigs of repos
+
+apt-get install debian-keyring
+#gpg --keyserver pgp.mit.edu --recv-keys 1F41B907
+#gpg --armor --export 1F41B907 | apt-key add -
+
+# This one appeared in an error message for one of the media repos for debian 8:
+gpg --keyserver pgp.mit.edu --recv-keys 977C43A8BA684223
+gpg --armor --export 977C43A8BA684223 | apt-key add -
+
+
+gpg --keyserver pgp.mit.edu --recv-keys 5C808C2B65558117
+gpg --armor --export 5C808C2B65558117| apt-key add -
+###############################################################################
 apt-get -y install synfig synfigstudio
 
 # for synfig dv output
@@ -195,3 +209,29 @@ if [ ! -d /root/.cache/duplicity ]; then
 	echo "WARNING. remember to point /root/.cache/duplicity to another "
 	echo "partition so that it does not fill my root partition."
 fi
+
+
+
+###############################################################################
+# jitsi server for jitsi meet (for secure video conferencing)
+# Derieved from https://github.com/jitsi/jitsi-meet/blob/master/doc/quick-install.md
+
+CheckJitsi=$(cat /etc/apt/sources.list|grep -i jitsi)
+if [ -z "${CheckJitsi}" ]; then
+    # The jitsi repo has not yet been configured, so
+    # configure it...
+    echo 'deb http://download.jitsi.org/nightly/deb unstable/' >> /etc/apt/sources.list
+    wget -qO - https://download.jitsi.org/nightly/deb/unstable/archive.key | apt-key add -
+fi
+
+# update with the new jitsi repo
+
+apt-get update
+if [ $? == 0 ]; then
+    apt-get -y install jitsi-meet
+else
+    echo "Error. the apt-get udate failed after adding the jitsi repo."
+    echo "Maybe there is a problem with the GPG key."
+    read -p "Press ENTER to continue..."
+fi
+
