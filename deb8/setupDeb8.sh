@@ -1,5 +1,24 @@
 #!/bin/sh
 
+echo "At some point, you might be prompted that you do not have the GPG/PGP key"
+echo "to confirm the signature on a Debian package.  This can happen if you add"
+echo "a custom repository and do not add the key for that repo."
+echo "You can fetch the key (typically from the repo source web page) "
+echo "and add it to your apt-key list using something like this "
+echo "(assuming that the key file that you downloaded is called Release.key):"
+echo
+echo "   apt-key add - < Release.key"
+echo
+echo "and check your keys like this:"
+echo
+echo "   apt-key list"
+echo 
+echo "You might find debian keys on the web site of the source code, or the "
+echo "web site of the custom repo, or here:"
+echo "http://ftp-master.debian.org/keys.html"
+echo
+read -p "Press ENTER to continue..." junk
+
 ###############################################################################
 # My personal setup script for Debia 8 desktop.
 # Setup and installation on Debian 8.1 AMD-64 with Cinamon desktop.
@@ -16,7 +35,8 @@
 ###############################################################################
 # Manual setup things:
 # 0) disable power settings and lock screen and set a password for user
-# or else the computer will sleep during install and lock you out
+# or else the computer will sleep during install and lock you out.
+#    During install, the user id is "user" and the pw is "live" for debian.
 # 1) install
 # manually format hard drive with MBR
 # boot vol = 500MB
@@ -67,7 +87,7 @@
 #        then run somethinglike this:
 #        virsh define /etc/libvirt/qemu/KVM05edu.xml
 # 5) create the windows user id
-#       useradd -m windows
+#       useradd -m windows -s /usr/sbin/nologin
 #       passwd windows
 #
 # 5) Nautilus options:
@@ -76,11 +96,29 @@
 # 6) for AV, add to /etc/apt/sources.list
 #    deb ftp://ftp.deb-multimedia.org jessie main non-free
 # 7) create a link from /root/.cache/duplicity to a big partition.
+#
+# 8) There are two ways to allow root access via SSH to this computer.
+#    A) use ssh-copy and RSA public key encryption (considered safer and
+#       much easier to automate scripts, but if a hacker gets the remote
+#       computer, then the hacker gets access to the remote unless you
+#       use ssh agent and a password on the RSA key on the remote computer).
+#       1) generate keys on the foreign client:
+#          ssh-keygen -t rsa
+#       2) copy the newly created id_rsa.pub from the client INTO the
+#          $HOME/.ssh/authorized_keys file 
+#         (or if you temporarily allows root access, use ssh-copy-id -i ~/.ssh/id_rsa.pub root@192.168.1.11,
+#         then disable PermitRootLogin).
+#    B) just allow direct ssh login from a remot computer (allows possible attack
+#       if hackers guess your password).
+#       To allow root login via ssh (not the safest option), edit /etc/ssh/sshd_config
+#          #PermitRootLogin without-password
+#          PermitRootLogin yes
+#  
 ###############################################################################
 apt-get -y update
 apt-get -y upgrade
 
-apt-get -y install cryptsetup vim emacs lynx wget curl vsftpd
+apt-get -y install cryptsetup vim lynx wget curl vsftpd parted
 
 # disable the driver for my apple touchpad because
 # it disconnects every second and floods my log file
@@ -88,6 +126,7 @@ apt-get -y install cryptsetup vim emacs lynx wget curl vsftpd
 rmmod bcm5974
 echo "rmmod bcm5974" >> ~/.profile
 echo "rmmod bcm5974" >> /home/super/.profile
+
 # ## I do not use recordmydesktop any more because it won't
 # ## see my Edirol USB microphone, so I use vokoscreen and kdenlive vid editor,
 # ## (note that kdenlive is a giant install)
@@ -100,44 +139,70 @@ echo "rmmod bcm5974" >> /home/super/.profile
 
 # screen and tmux split a window into panes
 apt-get -y install screen tmux ntpdate
-apt-get -y install  gnome-disk-utility gparted
 
 apt-get -y install hfsutils
 apt-get -y install nfs-common
 apt-get -y install tcpdump
 apt-get -y install duplicity git
-# file system deduplicator
-apt-get -y install fslint
 
 # random number entropy generator
 apt-get -y install haveged
 
-apt-get -y install xfsprogs
-
-# yum -y install libvirt qemu virt-manager virt-viewer virt-install
-
-apt-get -y install libvirt0 virtinst qemu-kvm virt-manager virt-viewer virtinst
-# libosinfo has osinfo-query
-apt-get -y install  libosinfo-1.0 libosinfo-bin
 
 # I am using erlang-base-hipe as the base erlang install. It supports native code.
 # For some reason the man pages were not included in the
 # default erlang install:
+# WARNING: AFTER INSTALLING ALL THE ERLANG PACKAGES,
+#          YOU PROBABLY HAVE TO REBOOT FOR MY SERVER TO RUN.
 apt-get  -y install erlang-base-hipe erlang-manpages erlang-crypto erlang-public-key
 apt-get -y install erlang-ssh
+apt-get -y install erlang-ssl
+apt-get -y install erlang-rebar
+apt-get -y install erlang-eunit
+apt-get -y install erlang-edoc
+apt-get -y install erlang-mnesia
 
-# this installed lots of shite libguestfs-tools
-
-# libvirt setup unique to my deb8 install. The other OS
-# create the defaul network automatically.
-if [ ! -d /etc/libvirt/qemu/networks/default.xml ]; then
-	virsh net-autostart default
-	# start the network
-	virsh net-start default
-fi
 
 ###############################################################################
-# Things that appear to be already installed with the DVD install:
+# duplicity will put gigabytes of crap in /root/.cache/duplicity, which will
+# ruin my small root partition, so attempt to avoid that by either using
+# --archive-dir for duplicity or try a soft link.
+if [ ! -d /root/.cache/duplicity ]; then
+	echo "WARNING. remember to point /root/.cache/duplicity to another "
+	echo "partition so that it does not fill my root partition."
+fi
+###############################################################################
+yn='n'
+read -p "Do you want to install support for xfs file system: " yn
+if [ "${yn}" = 'y' ]; then
+	apt-get -y install xfsprogs
+fi
+###############################################################################
+yn='n'
+read -p "Do you want to install libvirt for virtualization?: " yn
+if [ "${yn}" = 'y' ]; then
+	# this installed lots of shite libguestfs-tools
+
+	# libvirt setup unique to my deb8 install. The other OS
+	# create the default network automatically.
+	if [ ! -d /etc/libvirt/qemu/networks/default.xml ]; then
+		virsh net-autostart default
+		# start the network
+		virsh net-start default
+	fi
+	# yum -y install libvirt qemu virt-manager virt-viewer virt-install
+
+	apt-get -y install libvirt0 virtinst qemu-kvm virt-manager virt-viewer virtinst
+	# libosinfo has osinfo-query
+	apt-get -y install  libosinfo-1.0 libosinfo-bin
+fi
+###############################################################################
+# file system deduplicator
+apt-get -y install fslint
+###############################################################################
+###############################################################################
+###############################################################################
+# Things that appear to be already installed with the DVD install (Cinamon desktop)
 #  python3,
 #  gpg 1.4 (no elliptic curve)
 #  inkscape, gimp, imagemagick
@@ -166,34 +231,32 @@ fi
 ###############################################################################
 echo "after installing the wifi firmware, reboot"
 
-apt-get -y install r-base-dev libreoffice
+###############################################################################
+yn='n'
+read -p "Do you want to install nonessential graphical pgms (latex, gnucash, R, libreoffice): " yn
+if [ "${yn}" = 'y' ]; then
+	apt-get -y install r-base-dev libreoffice
 
-apt-get -y install gnucash
+	apt-get -y install gnucash
 
 
-apt-get -y install texlive
+	apt-get -y install texlive
+	apt-get -y install  gnome-disk-utility gparted
+fi
 
 ###############################################################################
-# get the infrastructure to verify GPG sigs of repos
+# Graphical stuff
 
-apt-get install debian-keyring
-#gpg --keyserver pgp.mit.edu --recv-keys 1F41B907
-#gpg --armor --export 1F41B907 | apt-key add -
+yn='n'
+read -p "Do you want to install synfig (cartoon creator)?: " yn
+if [ "${yn}" = 'y' ]; then
+	apt-get -y install synfig synfigstudio
 
-# This one appeared in an error message for one of the media repos for debian 8:
-gpg --keyserver pgp.mit.edu --recv-keys 977C43A8BA684223
-gpg --armor --export 977C43A8BA684223 | apt-key add -
-
-
-gpg --keyserver pgp.mit.edu --recv-keys 5C808C2B65558117
-gpg --armor --export 5C808C2B65558117| apt-key add -
-###############################################################################
-apt-get -y install synfig synfigstudio
-
-# for synfig dv output
-deb ftp://ftp.deb-multimedia.org jessie main non-free
-apt-get -y install ffmpeg2theora libavcodec-extra libavcodec-extra-56
-apt-get install libav-tools #for mod_ffmpg
+	# for synfig dv output
+	deb ftp://ftp.deb-multimedia.org jessie main non-free
+	apt-get -y install ffmpeg2theora libavcodec-extra libavcodec-extra-56
+	apt-get install libav-tools #for mod_ffmpg
+fi
 ###############################################################################
 ## Install Google Chrome for testing ON A VM
 ## For my tiny install on the old computer, I can not afford
@@ -202,36 +265,32 @@ apt-get install libav-tools #for mod_ffmpg
 ##      pkg install chromium
 
 ###############################################################################
-# duplicity will but gigabytes of crap in /root/.cache/duplicity, which will
-# ruin my small root partition, so attempt to avoid that by either usnig
-# --archive-dir for duplicity or try a soft link.
-if [ ! -d /root/.cache/duplicity ]; then
-	echo "WARNING. remember to point /root/.cache/duplicity to another "
-	echo "partition so that it does not fill my root partition."
-fi
-
-
-
-###############################################################################
-# jitsi server for jitsi meet (for secure video conferencing)
-# Derieved from https://github.com/jitsi/jitsi-meet/blob/master/doc/quick-install.md
-
-CheckJitsi=$(cat /etc/apt/sources.list|grep -i jitsi)
-if [ -z "${CheckJitsi}" ]; then
-    # The jitsi repo has not yet been configured, so
-    # configure it...
-    echo 'deb http://download.jitsi.org/nightly/deb unstable/' >> /etc/apt/sources.list
-    wget -qO - https://download.jitsi.org/nightly/deb/unstable/archive.key | apt-key add -
-fi
-
-# update with the new jitsi repo
-
-apt-get update
-if [ $? == 0 ]; then
-    apt-get -y install jitsi-meet
-else
-    echo "Error. the apt-get udate failed after adding the jitsi repo."
-    echo "Maybe there is a problem with the GPG key."
-    read -p "Press ENTER to continue..."
-fi
-
+#### Do not install jitsi meet on a server that has other web servers,
+#### because it can cause complications, then the uninstall failed for me.
+#### If you install jitse-meet, put it on its own machine.
+##
+## jitsi ## jitsi server for jitsi meet (for secure video conferencing)
+## jitsi ## Derieved from https://github.com/jitsi/jitsi-meet/blob/master/doc/quick-install.md
+## jitsi #
+## jitsi #CheckJitsi=$(cat /etc/apt/sources.list|grep -i jitsi)
+## jitsi #if [ -z "${CheckJitsi}" ]; then
+## jitsi #    # The jitsi repo has not yet been configured, so
+## jitsi #    # configure it...
+## jitsi #    echo 'deb http://download.jitsi.org/nightly/deb unstable/' >> /etc/apt/sources.list
+## jitsi #    wget -qO - https://download.jitsi.org/nightly/deb/unstable/archive.key | apt-key add -
+## jitsi #fi
+## jitsi #
+## jitsi ## update with the new jitsi repo
+## jitsi #
+## jitsi #apt-get update
+## jitsi #if [ $? == 0 ]; then
+## jitsi #    apt-get -y install jitsi-meet
+## jitsi #else
+## jitsi #    echo "Error. the apt-get udate failed after adding the jitsi repo."
+## jitsi #    echo "Maybe there is a problem with the GPG key."
+## jitsi #    read -p "Press ENTER to continue..."
+## jitsi #fi
+## jitsi #
+## jitsi ## the program for jitsi conferencing in jicofo.  it should be running after the install completes,
+## jitsi ## and if you look at this, it tells the port and domain name:
+## jitsi ## ps -Af|grep jicofo

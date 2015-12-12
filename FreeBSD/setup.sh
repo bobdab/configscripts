@@ -7,11 +7,24 @@
 #    # the script will do this: pkg update && pkg upgrade
 #    # verify if the internet works:
 #    ping -c 1 yahoo.com
+#
+#    # prepare to fetch the script over SSL
+#    pkg install ca_root_nss
+#    fetch https://tinyurl.com/nkq4bn3
+#    ln -s /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem
+#
+#    # the lazy way to fetch without fixing SSL:
+#    fetch  --no-verify-peer  https://tinyurl.com/nkq4bn3
+#
+#    # Do this only if you feel compelled to use wget:
 #    pkg install wget
 #    # get my setup script
+
 #    ## wget --no-check-certificate https://raw.githubusercontent.com/bobdab/configscripts/master/FreeBSD/setup.sh
 #    # use the short link to ge the setup script:
 #    wget --no-check-certificate https://tinyurl.com/nkq4bn3
+#
+#
 #    mv nkq4bn3 setup.sh
 #    chmod 755 setup.sh
 #    ./setup.sh
@@ -415,3 +428,5 @@ done
 if [ "${yn_priv}" = "y" ]; then
     pw usermod "${usr_id}" -G wheel
 fi
+
+echo "add your host name to /etc/hosts at the end of the line that starts with 127.0.0.1"
