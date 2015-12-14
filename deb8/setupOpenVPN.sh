@@ -18,8 +18,8 @@
 #    that (does a static IP solve the problem?).
 # A2) The clocks on client and server need to be approximately in sync, or there will
 #    be an error.
-# A3) The client will need the ca.crt, clientXXXX.crt, clientXXX.key.  The .key is
-#    secret, so don't email it.  consider adding a password to the .key.
+# A3) The client will need the ca.crt, clientXXXX.crt, clientXXX.key.  The ca.key is
+#    secret, so don't email it.  consider adding a password to the ca.key.
 # A4) send signal SIGUSR2 to dump statistics to a log file (log filename is
 #    in the server.conf file, but the default does not specify the directory).
 # A5) I will need static IP addresses like 10.8.0.2-10 for my erlang nodes,
