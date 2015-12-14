@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Run this offline and ship all but the ca.key files to the appropriate
+# machines.
+#
 # Get notes from these sources:
 # https://openvpn.net/howto.html
 # https://wiki.debian.org/OpenVPN
@@ -92,6 +95,8 @@ FAKE_CLIENT_IP=10.8.0.2
 
 
 cd /etc/openvpn
+# The example file name in server.conf is ta.key, but I called
+# it bobsharedsecret.key.
 if [ ! -f /etc/openvpn/bobsharedsecret.key ]; then
 	# generate a static server key,
 	# then copy this to each client's /etc/openvpn directory 
@@ -162,14 +167,31 @@ echo "==== I will now build the certificate for my server."
 ./build-key-server server
 
 clear
-echo "==== I will now build the certificate for slave01 ip 51."
+echo "==== I will now build the certificate for client001 ."
 echo "I don't think the common name or any other field matters"
 echo "as long as the key is signed by the CA."
-./build-key client_slave01
+./build-key client_001
 
 clear
-echo "==== I will now build the certificate for slave02 ip 06."
-./build-key client_slave02
+echo "==== I will now build the certificate for client002."
+./build-key client_002
+
+clear
+echo "==== I will now build the certificate for client002."
+./build-key client_003
+
+clear
+echo "==== I will now build the certificate for client002."
+./build-key client_004
+
+clear
+echo "==== I will now build the certificate for erlangS01"
+./build-key client_erlangS01
+
+clear
+echo "==== I will now build the certificate for erlangS02"
+./build-key client_erlangS02
+
 
 clear
 echo "==== I will now build the diffie helman key."
@@ -191,15 +213,55 @@ cp easy-rsa/keys/dh2048.pem .
 # create the server.conf file
 cd /etc/openvpn
 
-if [ ! server.conf ]; then
+if [ ! -f server.conf ]; then
 	# copy but do not clobber the example server.conf
 	cp -n /usr/share/doc/openvpn/examples/sample-config-files/server.conf.gz ./ 
-	gunzip server.conf.gz
+    if [ ! $? = 0 ]; then
+        echo "WARNING.  I did not find the example server.conf file."
+        echo "Look for it in /usr/share/doc/openvpn/examples/sample-config-files/server.conf.gz"
+        echo "after the other installation steps are done."
+        read -p "Press ENTER to continue.." junk
+    else
+        echo "Creating the example /etc/openvpn/server.conf file..."
+	   gunzip server.conf.gz
+    fi
 fi
 
-echo "at this point, stop and edit the /etc/openvpn/server.conf file"
-
-
+echo
+echo
+echo "At this point, edit the /etc/openvpn/server.conf file:"
+echo "1) change dh1024 to dh2048"
+echo "2) to assign specific IPs to specific clients, create the /etc/openvpn/ccd"
+echo "   subdirectory and create a file with the name of the client"
+echo "   and read the second set of tips for 'Thelonius' in the server.conf file."
+echo "3) If you uncomment the 'push \"redirect-gateway def1\"' line "
+echo "   then all client IP will be pushed to the VPN server."
+echo "   and then you also need this in the server.conf:"
+echo "      push \"dhcp-option DNS 10.8.0.1\""
+echo "4) for the erlang network, uncomment 'client-to-client' so that each node can see the other."
+echo "5) if there is a shared secret, all clients and server must have it,"
+echo "   and uncomment the ';tls-auth ta.key 0' line in both client and server conf files"
+echo "   (I called the file bobsharedsecret.key instead of ta.key)."
+echo "6) the default server option enables comp-lzo, so if you connect manually with a client,"
+echo "   you have to include the comp-lzo option on the client side (or use the client config"
+echo "   file that has comp-lzo."
+echo "7) set the cipher (usual is aes-128, but I might use: 'cipher AES-256-CBC'."
+read -p "Press ENTER to continue..." junk
+echo ""
+echo "Review the example client.conf file and make it consistent for comp-lzo,"
+echo "cipher, shared secret file name (and file) and the client option for the"
+echo "name of the cilent-XXXX.crt and client-XXX.key files (the .key files should"
+echo "be sent only a secure channel)."
+echo "Also move the ca.key and all client keys to an offline, secure storage location"
+echo "and sent the client crt and key files to the appropriate clients over a"
+echo "secure channel."
+echo "Check https://openvpn.net/howto.html for how to set the NAT on the server,"
+echo "or try running this on the SERVER:"
+echo "  iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE"
+echo "Edit  /etc/sysctl.conf and ucomment this line to allow forwarding:"
+echo "   net.ipv4.ip_forward=1"
+echo "Then run this to activate the change:"
+echo "   sudo sysctl -p /etc/sysctl.conf"
 ###############################################################################
 
 # # cleartext example, must be run as root
