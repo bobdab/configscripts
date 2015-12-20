@@ -5,6 +5,17 @@
 #
 # Get notes from these sources:
 # https://openvpn.net/howto.html
+# For ios: https://wiki.debian.org/OpenVPN#Debian_Server_with_Android_.2F_iOS_devices
+# but note that for iOS, the only fully secure way to get the certificate
+# is either to download an app, create your own email server with an
+# offical ssl certificate, then set up email on the client and get the certificate
+# (emailing it via a third party means that NSA can probably get a copy of
+# the certificate, but that does not mean that they can decrypt your connection:
+# I think it means that they could connect to the server, which does not
+# compromise the traffic on the VPN??). Maybe you could manually type the entire
+# shared secret into the shared secret field.
+#
+# other sources:
 # https://wiki.debian.org/OpenVPN
 # http://www.techrepublic.com/blog/linux-and-open-source/how-to-set-up-an-openvpn-server
 
@@ -262,6 +273,9 @@ echo "Edit  /etc/sysctl.conf and ucomment this line to allow forwarding:"
 echo "   net.ipv4.ip_forward=1"
 echo "Then run this to activate the change:"
 echo "   sudo sysctl -p /etc/sysctl.conf"
+echo
+echo "After all is set, try checking the routing table for 10.8.0.*"
+echo "   netstat -r"
 ###############################################################################
 
 # # cleartext example, must be run as root

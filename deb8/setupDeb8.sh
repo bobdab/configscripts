@@ -245,6 +245,13 @@ if [ "${yn}" = 'y' ]; then
 fi
 
 ###############################################################################
+yn='n'
+read -p "Do you want to install libimobiledevice-dev to talk to iPhone/iPod Touch: " yn
+if [ "${yn}" = 'y' ]; then
+	apt-get -y install libimobiledevice-dev
+fi
+
+###############################################################################
 # Graphical stuff
 
 yn='n'
