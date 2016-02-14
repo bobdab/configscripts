@@ -89,6 +89,9 @@
 #     send the appropriate clientXXXX.crt, clientXXX.key files
 #     to the client /etc/openvpn directory.
 #  9) connect from client to server.
+# 10) My guess is that if I want to add privoxy to the mix,
+#     I would have to do it on the server side and then
+#     set the OpenVPN config setting to point to a proxy.
 #
 
 # BE sure to open UDP 1194 on the firewall on the server.

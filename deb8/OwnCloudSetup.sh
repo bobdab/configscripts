@@ -636,7 +636,8 @@ else
 	echo "skipping owncloud server install."
 fi
 ###############################################################################
-yn='n' echo "=============================================================="
+echo "=============================================================="
+yn='n'
 read -p "Do You want generate self-signed ssl keys? (y/n) " yn_temp
 yn=$(echo "${yn_temp}"|tr '[[:upper:]]' '[[:lower:]]')
 if [ "${yn}" = 'y' ]; then

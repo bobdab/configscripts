@@ -138,6 +138,8 @@ echo "rmmod bcm5974" >> /home/super/.profile
 # #apt-get -y install gtk-recordmydesktop pitivi
 
 # screen and tmux split a window into panes
+apt-get -y install make
+apt-get -y install sudo
 apt-get -y install screen tmux ntpdate
 
 apt-get -y install hfsutils
@@ -157,10 +159,13 @@ apt-get -y install haveged
 apt-get  -y install erlang-base-hipe erlang-manpages erlang-crypto erlang-public-key
 apt-get -y install erlang-ssh
 apt-get -y install erlang-ssl
-apt-get -y install erlang-rebar
+# erlang-rebar is no longer found:
+# %%apt-get -y install erlang-rebar
+apt-get -y install rebar
 apt-get -y install erlang-eunit
 apt-get -y install erlang-edoc
 apt-get -y install erlang-mnesia
+apt-get -y install erlang-inets
 
 
 ###############################################################################
@@ -264,6 +269,18 @@ if [ "${yn}" = 'y' ]; then
 	apt-get -y install ffmpeg2theora libavcodec-extra libavcodec-extra-56
 	apt-get install libav-tools #for mod_ffmpg
 fi
+###############################################################################
+mkdir -p /home/super
+
+cat > /home/super/.screenrc <<EOF
+shelltitle "zz%t%"
+hardstatus on
+hardstatus alwayslastline
+hardstatus string "%{.bW}%-w%{.rW}%n %t%{-}%+w %=%{..G} %H %{..Y} %m/%d %C%a "
+#hardstatus string "%t%"
+EOF
+
+cp /home/super/.screenrc /root
 ###############################################################################
 ## Install Google Chrome for testing ON A VM
 ## For my tiny install on the old computer, I can not afford
