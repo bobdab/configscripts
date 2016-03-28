@@ -98,7 +98,15 @@
 # BE sure to open UDP 1194 on the firewall on the server.
 # BE sure to open UDP 1194 on the firewall on the server.
 
-apt-get install openvpn easy-rsa
+apt-get install -y openvpn easy-rsa
+
+# echo "Note that the admin client and server programs are optional..."
+# read -p "Press ENTER to continue..." junk
+# # gui client, optional
+# apt-get install gadmin-openvpn-client
+# 
+# # gui server, optional
+# apt-get install gadmin-openvpn-server
 
 SERVER_IP=shard03.naturalmessage.com
 CLIENT_IP=192.168.1.51
