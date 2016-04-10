@@ -318,3 +318,6 @@ cp /home/super/.screenrc /root
 ## jitsi ## the program for jitsi conferencing in jicofo.  it should be running after the install completes,
 ## jitsi ## and if you look at this, it tells the port and domain name:
 ## jitsi ## ps -Af|grep jicofo
+
+echo "You might want to add 'contrib' at the end of two of the lines in"
+echo "/etc/apt/sources.list to get some extra programs, like nyquist"
