@@ -19,12 +19,14 @@ echo "http://ftp-master.debian.org/keys.html"
 echo
 read -p "Press ENTER to continue..." junk
 
+PRIV_CONFIG_FILE=/etc/privoxy/config
 ###############################################################################
 # My personal setup script for Debia 8 desktop.
 # Setup and installation on Debian 8.1 AMD-64 with Cinamon desktop.
 #
 #
-#   wget --no-check-certificate https://raw.githubusercontent.com/bobdab/configscripts/master/deb8/setupDeb8.sh
+#   wget --no-check-certificate \
+#https://raw.githubusercontent.com/bobdab/configscripts/master/deb8/setupDeb8.sh
 ###############################################################################
 # To find programs and files in debian
 # apt-cache search PROGRAM_NAME
@@ -115,6 +117,81 @@ read -p "Press ENTER to continue..." junk
 #          PermitRootLogin yes
 #  
 ###############################################################################
+confirm(){
+    local tmp_FIN="N"
+    local yn=''
+    local MY_PROMPT="$1"
+    if (test -z "${MY_PROMPT}"); then
+        local MY_PROMPT="${MSG_CONTINUE}"
+    fi
+    while (test "${tmp_FIN}" = "N"); do
+        read -p "$MY_PROMPT" yn
+
+        case "${yn}" in
+            # Note: there can be many commands inside the "case"
+            # block, but the last one in each block must end with
+            # two semicolons.
+            'y'|'Y') 
+                tmp_FIN="Y";;
+            'n'|'N')
+                tmp_FIN="Y";
+                return 12;;
+        esac    
+    done;
+    return 0
+}
+###############################################################################
+
+apt-get -y install bash
+
+SRC_CHECK=$(cat /etc/apt/sources.list|grep -v '^[#]' |grep -i cdrom)
+if [ -n "${SRC_CHECK}" ]; then
+  clear
+  echo "==========================================================="
+  echo "Warning.  You still refer to the install CDROM in your"
+  echo "/etc/apt/source.list file."
+  echo "You probably want to comment that out by inserting a # character"
+  echo "at the start of the line that refers to the cdrom."
+  echo
+fi
+
+
+INST_XFS='n'
+if confirm "Do you want to install support for xfs file system: "; then
+  INST_XFS='y'
+fi
+
+INST_LIBVIRT='n'
+if confirm "Do you want to install libvirt for virtualization?: "; then
+  INST_LIBVIRT='y'
+fi
+
+INST_OPTIONAL_GUI_APPS='n'
+MY_PROMPT="Do you want to install nonessential graphical pgms (latex, gnucash, R, libreoffice): "
+if confirm "${MY_PROMPT}"; then
+  INST_OPTIONAL_GUI_APPS='y'
+fi
+
+
+
+LIB_MOBILE_DEV='n'
+MY_PROMPT="Do you want to install libimobiledevice-dev to talk to iPhone/iPod Touch: "
+if confirm "${MY_PROMPT}"; then
+  LIB_MOBILE_DEV='y'
+fi
+
+
+INST_SYNFIG='n'
+if confirm "Do you want to install synfig (cartoon creator)?: "; then
+  INST_SYNFIG='y'
+fi
+
+
+INST_TOR='n'
+if confirm "Do you want to install tor and privoxy?: "; then
+  INST_TOR='y'
+fi
+###############################################################################
 apt-get -y update
 apt-get -y upgrade
 
@@ -124,6 +201,9 @@ apt-get -y install cryptsetup vim lynx wget curl vsftpd parted
 # it disconnects every second and floods my log file
 # with shite
 rmmod bcm5974
+echo "# Remove the Macbook Pro mousepad functinality"
+echo "# because it constantly hangs and tries to reset itself."
+echo "Also add this to /etc/rc.local"
 echo "rmmod bcm5974" >> ~/.profile
 echo "rmmod bcm5974" >> /home/super/.profile
 
@@ -177,15 +257,12 @@ if [ ! -d /root/.cache/duplicity ]; then
 	echo "partition so that it does not fill my root partition."
 fi
 ###############################################################################
-yn='n'
-read -p "Do you want to install support for xfs file system: " yn
-if [ "${yn}" = 'y' ]; then
-	apt-get -y install xfsprogs
+if [ "${INST_XFS}" = 'y' ]; then
+  apt-get -y install xfsprogs
 fi
+
 ###############################################################################
-yn='n'
-read -p "Do you want to install libvirt for virtualization?: " yn
-if [ "${yn}" = 'y' ]; then
+if [ "${INST_LIBVIRT}" = 'y' ]; then
 	# this installed lots of shite libguestfs-tools
 
 	# libvirt setup unique to my deb8 install. The other OS
@@ -237,9 +314,7 @@ apt-get -y install fslint
 echo "after installing the wifi firmware, reboot"
 
 ###############################################################################
-yn='n'
-read -p "Do you want to install nonessential graphical pgms (latex, gnucash, R, libreoffice): " yn
-if [ "${yn}" = 'y' ]; then
+if [ "${INST_OPTIONAL_GUI_APPS}" = 'y' ]; then
 	apt-get -y install r-base-dev libreoffice
 
 	apt-get -y install gnucash
@@ -250,18 +325,32 @@ if [ "${yn}" = 'y' ]; then
 fi
 
 ###############################################################################
+if [ "${LIB_MOBILE_DEV}" = 'y' ]; then
+	apt-get -y install libimobiledevice-dev
+fi
+
+
+###############################################################################
 yn='n'
 read -p "Do you want to install libimobiledevice-dev to talk to iPhone/iPod Touch: " yn
 if [ "${yn}" = 'y' ]; then
-	apt-get -y install libimobiledevice-dev
+    echo "This appears to work automatically when I install GNOME desktop and then"
+    echo "run the installs here.   The result is that the iPod appears as a hard drive."
+    echo "This setup does not allow import/export to iTunes, but other programs might"
+    echo "do that."
+    echo "I do not need to do any of the manual setup"
+    echo "steps that are mentioned here: work but see https://wiki.debian.org/iPhone."
+    echo "GNOME will automount newly attached devices, but other desktops, like"
+    echo "Cinamon or XFCE will not."
+    echo "the iPhone will be automounted to a funny name, like:"
+    ehco "/run/user/1000/gvfs/afc\:host\=123456abc61384681236481326ffffdddee11111/"
+	apt-get -y install libimobiledevice-dev libimobiledevice-utils gvfs-backends gvfs-bin gvfs-fuse
 fi
 
 ###############################################################################
 # Graphical stuff
 
-yn='n'
-read -p "Do you want to install synfig (cartoon creator)?: " yn
-if [ "${yn}" = 'y' ]; then
+if [ "${INST_SYNFIG}" = 'y' ]; then
 	apt-get -y install synfig synfigstudio
 
 	# for synfig dv output
@@ -269,6 +358,28 @@ if [ "${yn}" = 'y' ]; then
 	apt-get -y install ffmpeg2theora libavcodec-extra libavcodec-extra-56
 	apt-get install libav-tools #for mod_ffmpg
 fi
+
+
+if [ "${INST_TOR}" = 'y' ]; then
+    apt-get -y install tor privoxy
+    if [ -f "${PRIV_CONFIG_FILE}" ]; then
+        PTEST=$(cat ${PRIV_CONFIG_FILE} | grep '^forward[-]socks5 ')
+				echo "test of ptest ${PTEST}"
+        if [ -z "${PTEST}" ]; then
+            # append the socks5 setting to the privoxy config file
+            echo "Note: adding socks5 setting to privoxy config file..."
+            echo "forward-socks5   /               127.0.0.1:9050   ." >> "${PRIV_CONFIG_FILE}"
+        else
+            echo "Note: privoxy already has a socks5 setting"
+        fi
+    else
+        echo "OOPS. I did not find the privoxy config file in the correct place."
+        echo "quitting now"
+        exit 9834
+    fi
+    
+fi
+
 ###############################################################################
 mkdir -p /home/super
 
@@ -291,7 +402,7 @@ cp /home/super/.screenrc /root
 ###############################################################################
 #### Do not install jitsi meet on a server that has other web servers,
 #### because it can cause complications, then the uninstall failed for me.
-#### If you install jitse-meet, put it on its own machine.
+#### If you install jitsi-meet, put it on its own machine.
 ##
 ## jitsi ## jitsi server for jitsi meet (for secure video conferencing)
 ## jitsi ## Derieved from https://github.com/jitsi/jitsi-meet/blob/master/doc/quick-install.md
@@ -318,6 +429,7 @@ cp /home/super/.screenrc /root
 ## jitsi ## the program for jitsi conferencing in jicofo.  it should be running after the install completes,
 ## jitsi ## and if you look at this, it tells the port and domain name:
 ## jitsi ## ps -Af|grep jicofo
+
 
 echo "You might want to add 'contrib' at the end of two of the lines in"
 echo "/etc/apt/sources.list to get some extra programs, like nyquist"

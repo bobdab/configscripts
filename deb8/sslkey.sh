@@ -7,6 +7,10 @@ if [ ! "${u}" = "0" ]; then
     exit
 fi
 
+echo "If you are trying to create Natural Message keys, see the sslNatMsg.sh script"
+read -p "Press ENTER to continue " junk
+
+
 # key format is PEM or DER
 KEY_FORMAT=PEM
 ##WORKING_DIR=/root/noarch/keytemp
