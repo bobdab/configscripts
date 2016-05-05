@@ -191,6 +191,18 @@ INST_TOR='n'
 if confirm "Do you want to install tor and privoxy?: "; then
   INST_TOR='y'
 fi
+
+INST_LOC_NET='n'
+if confirm "Do you want to make the local network point to a static address of 10.0.0.5 in /etc/network/interfaces?: "; then
+  INST_LOC_NET='y'
+fi
+
+NM_INST='n'
+if confirm "Do you want to install Network Manager to simplify wifi connections (do this only if you have GNOME, in which case it should be installed automatically)?: "; then
+  NM_INST='y'
+fi
+
+
 ###############################################################################
 apt-get -y update
 apt-get -y upgrade
@@ -381,6 +393,24 @@ if [ "${INST_TOR}" = 'y' ]; then
 fi
 
 ###############################################################################
+if [ "${INST_LOC_NET}" = 'y' ]; then
+
+
+TST_NET=$(grep '10[.]0[.]0[.]' /etc/network/interfaces)
+
+if [ -z "${TST_NET}"]; then
+# I don't see my hack in the interfaces file, try adding a setting
+cat > /etc/network/interfaces <<EOF
+# bob added this to bring up local network automaticaly
+auto eth0
+iface eth0 inet static
+   address 10.0.0.5
+   netmask 255.255.255.
+EOF
+fi
+
+fi
+###############################################################################
 mkdir -p /home/super
 
 cat > /home/super/.screenrc <<EOF
@@ -429,7 +459,98 @@ cp /home/super/.screenrc /root
 ## jitsi ## the program for jitsi conferencing in jicofo.  it should be running after the install completes,
 ## jitsi ## and if you look at this, it tells the port and domain name:
 ## jitsi ## ps -Af|grep jicofo
+###############################################################################
+#    add a script that can be used to automate reconnection of a downed 
+#    internet connection
 
 
-echo "You might want to add 'contrib' at the end of two of the lines in"
-echo "/etc/apt/sources.list to get some extra programs, like nyquist"
+if [ -z "${NM_INST}"]; then
+echo "Installing Network Manager"
+
+# Note that without GNOME, it might be better to install wicd instead of NetworkManager.
+#
+# Note that some network interfaces are handled by ifupdown
+# and you would have to make a change to let network manager handle them
+# Here are some notes during install
+#   The following network interfaces were found in /etc/network/interfaces
+#   which means they are currently configured by ifupdown:
+#   - eth0
+#   - wlan0
+#   - wlan1
+#  If you want to manage those interfaces with NetworkManager instead
+#  remove their configuration from /etc/network/interfaces.
+
+
+apt-get -y install network-manager
+
+cat > /usr/bin/wifi_reconnect.sh <<EOF
+#!/bin/sh
+
+# This will make exactly one attempt to connect to the Internet
+# (without running a loop).
+# This might be called by a cron job every few minutes
+# in an attempt to keep the Internet up without Network Manager
+# (which is installed when GNOME desktop is installed).
+
+
+# See if you are connectd to the Internet
+#    (it will return a text status message)
+/sbin/iw wlan0 link
+
+##good='n'
+##while [ "${good}" = 'n' ]; do
+    # echo "I will test the Internet using a ping... This could take 40 seconds..."
+    ping -c 2 -W 40 yahoo.com
+    if [ ! "$?" = "0" ]; then
+        echo -n "The wifi does not appear to be up.  Attempting to fix it... "
+        date
+
+        echo "killing the old dhclient and wpa_supplicant..."
+        # release, kill, and double kill the old dhclient
+        dhclient -v -r
+        dhclient -x wlan0
+        killall -w dhclient # double sure that dhclient is dead
+        killall -w wpa_supplicant
+
+        ifconfig wlan0 down
+        ifconfig wlan0 up
+
+        # not sure which is needed when the official Network Manager app is 
+        # not installed
+        #systemctl restart network-manager
+        systemctl restart networking
+
+        iwlist scan|grep 'ESSID\|Address\|wlan'
+        # echo "================= here is some info about wlan0 wifi connection:"
+        # the wpa_supplicant command was NOT WORKING, so I
+        # added the killall command to see what happens when I reconnect
+        echo "Running wpa_supplicant now..."
+        wpa_supplicant -B -D wext -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant.conf
+        if [ $? = 0 ]; then
+            echo "I will run dhclient, and that can take a minute..."
+            dhclient -v wlan0
+        else
+            echo "wpa_supplicant failed."
+            exit 44
+        fi
+    else
+        echo -n "The ping test indicates that the Internet is working. "
+        date
+    fi
+    sleep 15
+    echo "Double-checking the functionality of the Internet connection with another ping:"
+    ping -c 2 -W 40 yahoo.com
+    if [ "$?" = "0" ]; then
+       good='y'
+       echo "The Internet seem to be functioning OK."
+    else
+        echo "Internet seem broken."
+        exit 55
+    fi
+##done
+
+EOF
+
+chmod 555 /usr/bin/wifi_reconnect.sh
+fi
+###############################################################################
