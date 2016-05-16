@@ -1,17 +1,17 @@
 #!/bin/bash
 
 # This script allows the user to keep three separate config directories
-# for google-chrome (a Bank config and a Default/Regular config, and a TOR config).
+# for google-chrome (a Bank config and a Default/Regular config, and a NOFLASH config).
 #
 # I used chrome because, at one time, a particular
 # add-in was not working in iceweasel, but now that add-in works in 
 # ice-weasel.
 #
-# I set up the separate TOR settings, but Chrome uses the system proxy settings,
+# I set up the separate NOFLASH settings, but Chrome uses the system proxy settings,
 # so I think I wasted my time, but maybe I'll keep the logic for a third config for future use.
 #
 # This will not configure tor or privoxy for you.  If you install TOR and privoxy,
-# then load the TOR mode and modify the settings/advance/network settings to point
+# modify the settings/advance/network settings to point
 # to localhost:8118 to point the proxy to privoxy (and click the buttons to use that
 # for all protocals and click the other button to send DNS over that) then
 # modify the privoxy settings to say this (without the leading # but with the trailing dot)
@@ -32,12 +32,12 @@ DSTAMP=$(date +%Y%m%d-%H%M%S)
 GDIR="${HOME}/.config/google-chrome"
 GBankDIR="${HOME}/.config/googleBank"
 GRegDIR="${HOME}/.config/googleRegular"
-GTorDIR="${HOME}/.config/googleTor"
+GNOFLASHDIR="${HOME}/.config/googleNOFLASH"
 
 GBankTAG="Default/bank.tag"
 GRegTAG="Default/default.tag"
-GTorTAG="Default/tor.tag"
-# This will prompt to start either "default" or "bank" or "TOR"
+GNOFLASHTAG="Default/NOFLASH.tag"
+# This will prompt to start either "default" or "bank" or "NOFLASH"
 # mode for google-chrome, then set the profile
 # accordingly and start chrome in the background
 
@@ -69,52 +69,59 @@ confirm(){
 
 ############################################################
 
+echo "Remember that Ctl-SHIFT-DEL clears your browsing history in Chrome."
+echo "Remember that you have to configure the NOFLASH mode yourself..."
+echo "You might want to disable Javascript and Flash for NOFLASH."
+echo
+echo
 echo "Select a number:"
 echo " 1) chrome in default mode."
 echo " 2) chrome in bank mode."
-echo " 3) chrome in TOR mode."
+echo " 3) chrome in NOFLASH mode."
 read -p ": " choice
 
 ###############################################################################
 # Initialize if need be
 if [ ! -d "${GBankDIR}" ]; then
     if [ ! -d "${GRegDIR}" ]; then
-        clear
-        echo "WARNING: Neither the bank nor regular source directories exist."
-        if confirm "Do you want to initialize the directories for bank, regular, and TOR?"; then
-            # Bank
-            rsync -a --delete "${GDIR}/" "${GBankDIR}/" 
-            if [ ! $? = 0 ]; then
-                echo "Error initializing $GBankDIR"
-                exit 12
+        if [ ! -d "${GNOFLASHDIR}" ]; then
+            clear
+            echo "WARNING: None of the custom Chrome settings-directories exist."
+            if confirm "Do you want to initialize the directories for bank, regular, and NOFLASH?"; then
+                # Bank
+                rsync -a --delete "${GDIR}/" "${GBankDIR}/" 
+                if [ ! $? = 0 ]; then
+                    echo "Error initializing $GBankDIR"
+                    exit 12
+                fi
+                rm "${GBankDIR}/${GRegTAG}"
+                rm "${GBankDIR}/${GNOFLASHTAG}"
+                touch "${GBankDIR}/${GBankTAG}"
+
+                # Regular
+                rsync -a --delete  "${GDIR}/" "${GRegDIR}/"
+                if [ ! $? = 0 ]; then
+                    echo "Error initializing $GRegDIR"
+                    exit 14
+                fi
+                touch "${GRegDIR}/${GRegTAG}"
+                rm "${GRegDIR}/${GBankTAG}"
+                rm "${GRegDIR}/${GNOFLASHTAG}"
+
+
+                # NOFLASH
+                rsync -a --delete "${GDIR}/" "${GNOFLASHDIR}/" 
+                if [ ! $? = 0 ]; then
+                    echo "Error initializing $GNOFLASHDIR"
+                    exit 12
+                fi
+                rm "${GNOFLASHDIR}/${GRegTAG}"
+                rm "${GNOFLASHDIR}/${GBankTAG}"
+                touch "${GNOFLASHDIR}/${GNOFLASHTAG}"
+
+                # initialize the existing config to be "regular" mode
+                touch "${GDIR}/${GRegTAG}"
             fi
-            rm "${GBankDIR}/${GRegTAG}"
-            rm "${GBankDIR}/${GTorTAG}"
-            touch "${GBankDIR}/${GBankTAG}"
-
-            # Regular
-            rsync -a --delete  "${GDIR}/" "${GRegDIR}/"
-            if [ ! $? = 0 ]; then
-                echo "Error initializing $GRegDIR"
-                exit 14
-            fi
-            touch "${GRegDIR}/${GRegTAG}"
-            rm "${GRegDIR}/${GBankTAG}"
-            rm "${GRegDIR}/${GTorTAG}"
-
-
-            # TOR
-            rsync -a --delete "${GDIR}/" "${GTorDIR}/" 
-            if [ ! $? = 0 ]; then
-                echo "Error initializing $GTorDIR"
-                exit 12
-            fi
-            rm "${GTorDIR}/${GRegTAG}"
-            rm "${GTorDIR}/${GBankTAG}"
-            touch "${GTorDIR}/${GTorTAG}"
-
-            # intialize the existing config to be "regular" mode
-            touch "${GDIR}/${GRegTAG}"
         fi
     fi
 else
@@ -124,6 +131,12 @@ else
         echo "Something bad happened.  You might want to archive the"
         echo "config directory and then delete the $GBankDIR and"
         echo "$GRegDIR directories and run this script to reinitialize."
+        exit 15
+    fi
+    if [ ! -d "${GNOFLASHDIR}" ]; then
+        echo "It looks like the source directory for bank mode exists,"
+        echo "but the source for the NOFLASH directory does not."
+        echo "Something bad happened. "
         exit 15
     fi
 fi
@@ -146,16 +159,16 @@ if [ "${choice}" = "1" ]; then
             echo "Restoring the Regular profile"
             # save the current profile to  the bank profile
             rsync -a --delete "${GRegDIR}/" "${GDIR}/"
-        ##elif [ -f "${GDIR}/Default/tor.tag" ]; then
-        elif [ -f "${GDIR}/${GTorTAG}" ]; then
-            # save the current profile to  the TOR profile
-            echo "Saving current profile to the TOR profile before restoring the regular profile"
-            rsync -a --delete "${GDIR}/" "${GTorDIR}/"
+        ##elif [ -f "${GDIR}/Default/NOFLASH.tag" ]; then
+        elif [ -f "${GDIR}/${GNOFLASHTAG}" ]; then
+            # save the current profile to  the NOFLASH profile
+            echo "Saving current profile to the NOFLASH profile before restoring the regular profile"
+            rsync -a --delete "${GDIR}/" "${GNOFLASHDIR}/"
 
             echo "Restoring the Regular profile"
             rsync -a --delete "${GRegDIR}/" "${GDIR}/"
         else
-            echo "test: ${GDIR}/${GTorTAG}"
+            echo "test: ${GDIR}/${GNOFLASHTAG}"
             echo "Error. I found neither the Regular nor Bank tags"
             exit
         fi
@@ -180,15 +193,15 @@ elif [ "${choice}" = "2" ]; then
 
             echo "Restoring the Bank profile"
             rsync -a --delete "${GBankDIR}/" "${GDIR}/"
-        elif [ -f "${GDIR}/${GTorTAG}" ]; then
-            # save the current profile to  the TOR profile
-            echo "Saving current profile to the TOR profile before restoring the Bank profile"
-            rsync -a --delete "${GDIR}/" "${GTorDIR}/"
+        elif [ -f "${GDIR}/${GNOFLASHTAG}" ]; then
+            # save the current profile to  the NOFLASH profile
+            echo "Saving current profile to the NOFLASH profile before restoring the Bank profile"
+            rsync -a --delete "${GDIR}/" "${GNOFLASHDIR}/"
 
             echo "Restoring the Bank profile"
             rsync -a --delete "${GBankDIR}/" "${GDIR}/"
         else
-            echo "Error. I found neither the Regular nor Bank nor TOR tags"
+            echo "Error. I found neither the Regular nor Bank nor NOFLASH tags"
             exit
         fi
     fi
@@ -196,27 +209,27 @@ elif [ "${choice}" = "2" ]; then
     /usr/bin/google-chrome
 
 elif [ "${choice}" = "3" ]; then
-    if [ -f "${GDIR}/${GTorTAG}" ]; then
-        echo "Already in TOR mode"
+    if [ -f "${GDIR}/${GNOFLASHTAG}" ]; then
+        echo "Already in NOFLASH mode"
     else
         if [ -f "${GDIR}/${GRegTAG}" ]; then
-            # save the current profile to  the REgular profile
-            echo "Saving current profile to the Regular profile before restoring the TOR profile"
+            # save the current profile to  the Regular profile
+            echo "Saving current profile to the Regular profile before restoring the NOFLASH profile"
             rsync -a --delete "${GDIR}/" "${GRegDIR}/"
 
-            echo "Restoring the TOR profile"
+            echo "Restoring the NOFLASH profile"
 
-            rsync -a --delete "${GTorDIR}/" "${GDIR}/"
+            rsync -a --delete "${GNOFLASHDIR}/" "${GDIR}/"
         elif [ -f "${GDIR}/${GBankTAG}" ]; then
             # save the current profile to  the bank profile
-            echo "Saving current profile to the Bank profile before restoring the Tor profile"
+            echo "Saving current profile to the Bank profile before restoring the NOFLASH profile"
             rsync -a --delete "${GDIR}/" "${GBankDIR}/"
 
-            echo "Restoring the Tor profile"
+            echo "Restoring the NOFLASH profile"
 
-            rsync -a --delete "${GTorDIR}/" "${GDIR}/"
+            rsync -a --delete "${GNOFLASHDIR}/" "${GDIR}/"
         else
-            echo "Error. I found neither the Regular, Bank, nor TOR tags"
+            echo "Error. I found neither the Regular, Bank, nor NOFLASH tags"
             exit
         fi
     fi
