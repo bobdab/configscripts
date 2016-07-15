@@ -304,6 +304,20 @@ apt-get -y install fslint
 #  iceweasel, icedove (instead of firefox)
 #  games and GNOME bloatware.
 ###############################################################################
+
+cat > /etc/apt/sources.list <<EOF
+# dvd for libdvdcss2:
+# Add videolan.org to your sources.list file, then run:
+#
+#   wget -O - http://download.videolan.org/pub/debian/videolan-apt.asc|sudo apt-key add -
+#   sudo apt-get update
+#   sudo apt-get install libdvdcss2
+#   reboot now
+#
+deb http://download.videolan.org/pub/debian/stable/ /
+EOF
+
+###############################################################################
 # # #   one time setup for firmware
 # # #
 # # #  Find these packages on debian.org under the packages:
@@ -326,11 +340,23 @@ apt-get -y install fslint
 echo "after installing the wifi firmware, reboot"
 
 ###############################################################################
+TESTBELL=$(grep '^set bell[-]style' /etc/inputrc)
+if [ -n "${TESTBELL}" ]; then
+    # if there is no setting for the bell that sounds
+    # from the command line, set it to 'visible
+    echo "set bell-style visible" >> /etc/inputrc
+    
+fi
+###############################################################################
+
 if [ "${INST_OPTIONAL_GUI_APPS}" = 'y' ]; then
 	apt-get -y install r-base-dev libreoffice
 
 	apt-get -y install gnucash
 
+
+    # dvd/cd burner:
+    apt-get -y install xfburn
 
 	apt-get -y install texlive
 	apt-get -y install  gnome-disk-utility gparted

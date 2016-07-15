@@ -18,6 +18,24 @@
 #     forward-socks5   /               127.0.0.1:9050   .
 #
 #
+# For a system proxy that goes through privoxy only:
+# ==================================================
+# 1) Create a config file called /etc/privoxy/config.noTor
+# and comment out any line that forwards socks5 and change
+# the listen address to 8119.
+# 2) run privoxy from a regular user ID (not root) like this:
+#     /usr/sbin/privoxy --no-daemon /etc/privoxy/config.noTor
+# 3) Try setting an environmentvariable to point
+#    to privoxy (bypasses Tor) because this might help
+#    some browsers:
+#     # Check which ports are in use:
+#     sudo netstat -an|less
+#     export http_proxy="http://localhost:8119"
+# 4) Go to the control panel/network
+#    and set a system proxy there to point to localhost:8119
+#    you run two privoxies with one straight to Internet and one
+#    through Tor)
+#
 # CONSIDER MODIFYING THIS SO THAT THE BANK VERSION IS COPIED FROM
 # A FROZEN SOURCE EACH TIME, AND MAYBE ADD AN OPTION TO
 # USE THE CURRENT/LIVE SETTINGS AS THE FROZEN VERSION.
