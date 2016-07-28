@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # This will make exactly one attempt to connect to the Internet
+
 # (without running a loop).
 # This might be called by a cron job every few minutes
 # in an attempt to keep the Internet up without Network Manager
@@ -18,8 +19,11 @@
 ##good='n'
 ##while [ "${good}" = 'n' ]; do
     # echo "I will test the Internet using a ping... This could take 40 seconds..."
-    ping -c 2 -W 40 yahoo.com
-    if [ ! "$?" = "0" ]; then
+    ##ping -c 2 -W 40 yahoo.com
+    ##if [ ! "$?" = "0" ]; then
+
+    TEST_WIFI=$(/sbin/iw wlan1 link|grep -i 'not connected')
+    if [ -n "${TEST_WIFI}" ]; then
         echo -n "The wifi does not appear to be up.  Attempting to fix it... "
         date
 

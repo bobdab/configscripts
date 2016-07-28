@@ -117,6 +117,49 @@ PRIV_CONFIG_FILE=/etc/privoxy/config
 #          PermitRootLogin yes
 #  
 ###############################################################################
+# OpenNIC with DNSCrypt (encrypted DNS that does not go to Google or your 
+# local ISP
+# For DNSCrypt, first read https://en.wikipedia.org/wiki/DNSCrypt.
+# DNSCrypt works on port 443 and requires that you explicitly trust
+# the certificate for your nameserver.
+# OpenNIC and DNSCRypte alone do not add any security because your
+# ISP sees the IP address that you are using anyway.  OpenNIC and DNSCrypt
+# might be useful if you use VPN and want to resolve your DNS locally
+# with more privacy than telling your local ISP.  I had commercial VPN
+# services that used Google 8.8.8.8 to resolve the DNS--so that is a waste
+# of time.
+#
+# What does this mean: https://github.com/enigmagroup/enigmabox-openwrt/issues/7
+#
+# To use OpenNic, yandex or other nameserver, 
+#   1) Pick an IP from http://servers.opennicproject.org/
+#      or https://dns.yandex.com/advanced/.
+#   2) Put it in /etc/resolv.conf as the nameserver
+#           nameserver 198.251.86.12
+#      and optionally add a second nameserver
+#   3) Comment out all other lines in resolv.conf
+#      and save the file.
+#   4) Run 'sudo systemctl reload networking'
+#   5) Rerun my firewall script that might include some
+#      logic related to the nameserver
+#   6) Quit and restart:
+#        tor; privoxy; your browswer (for good luck)
+#   7) See if you can get to bithunt.bit or grep.geek 
+#   8) If you are daring, you could change the permissions
+#      on /etc/resolv.conf so that other programs
+#      can not modify it, but in some situations, this
+#      will cause a problem because you will not be able
+#      to authentic to a network before being allowed
+#      to access the Internet.
+#
+# Another alternative is OpenNIC-compatible public DNS resolver run
+# by Yandex.ru (at least it is in Russia).
+#     Yandex.DNS Standard (77.88.8.8) provides completely unfiltered access, 
+#     Yandex.DNS Secure (77.88.8.88) blocks access to harmful websites, 
+#     Yandex.DNS Family (77.88.8.7) blocks adult content websites in 
+#       addition to infected and phishing websites.
+#
+###############################################################################
 confirm(){
     local tmp_FIN="N"
     local yn=''
@@ -218,6 +261,9 @@ echo "# because it constantly hangs and tries to reset itself."
 echo "Also add this to /etc/rc.local"
 echo "rmmod bcm5974" >> ~/.profile
 echo "rmmod bcm5974" >> /home/super/.profile
+echo "# disable the bell in 'less'"  >> /home/super/.profile
+echo "export LESS='-Q'"  >> /home/super/.profile
+
 
 # ## I do not use recordmydesktop any more because it won't
 # ## see my Edirol USB microphone, so I use vokoscreen and kdenlive vid editor,
@@ -318,10 +364,14 @@ deb http://download.videolan.org/pub/debian/stable/ /
 EOF
 
 ###############################################################################
-# # #   one time setup for firmware
+# # #   one time setup for firmware for Broadcom on my Mac 
+# # #   and ATHEROS for my usb wifi thing.
 # # #
-# # #  Find these packages on debian.org under the packages:
-# # cd ~/deb8/initialpackages
+# # # First download the .deb package from another computer.
+# # # For the ATHEROS, go to here for Debian 8:
+# # #  https://packages.debian.org/jessie/firmware-atheros
+# # # 
+# # # I might have a copy of the files here : cd ~/deb8/initialpackages
 # # 
 # # dpkg -i b43-fwcutter_019-2_amd64.deb
 # # # this pointed to a dead site:
@@ -336,6 +386,14 @@ EOF
 # # dpkg -i firmware-atheros_0.44_all.deb
 # # 
 # # dpkg -i wireless-tools_30~pre9-8_amd64.deb
+###############################################################################
+# alternative setup for my atheros USB wifi thing
+# Add a "non-free" component to /etc/apt/sources.list, for example
+# # Debian 8 "Jessie"
+# deb http://httpredir.debian.org/debian/ jessie main contrib non-free
+#
+# Then:
+# apt-get update && apt-get install firmware-atheros
 ###############################################################################
 echo "after installing the wifi firmware, reboot"
 
@@ -448,6 +506,124 @@ hardstatus string "%{.bW}%-w%{.rW}%n %t%{-}%+w %=%{..G} %H %{..Y} %m/%d %C%a "
 EOF
 
 cp /home/super/.screenrc /root
+###############################################################################
+
+cat > /home/super/.vimrc <<EOF
+" An example for a vimrc file that contains modifications
+" by Bob.
+"
+" Maintainer:	Bram Moolenaar <Bram@vim.org>
+" Last change:	2014 Feb 05
+"
+" To use it, copy it to
+"     for Unix and OS/2:  ~/.vimrc
+"	      for Amiga:  s:.vimrc
+"  for MS-DOS and Win32:  $VIM\_vimrc
+"	    for OpenVMS:  sys$login:.vimrc
+
+" When started as "evim", evim.vim will already have done these settings.
+if v:progname =~? "evim"
+  finish
+endif
+
+" Use Vim settings, rather than Vi settings (much better!).
+" This must be first, because it changes other options as a side effect.
+set nocompatible
+
+" allow backspacing over everything in insert mode
+set backspace=indent,eol,start
+
+set nobackup		" do not keep a backup file, use versions instead
+set nowritebackup	" dont want a backup file while editing
+"if has("vms")
+"  set nobackup		" do not keep a backup file, use versions instead
+"else
+"  set backup		" keep a backup file (restore to previous version)
+"  set undofile		" keep an undo file (undo changes after closing)
+"endif
+set history=50		" keep 50 lines of command line history
+set ruler		" show the cursor position all the time
+set showcmd		" display incomplete commands
+set incsearch		" do incremental searching
+
+" For Win32 GUI: remove 't' flag from 'guioptions': no tearoff menu entries
+" let &guioptions = substitute(&guioptions, "t", "", "g")
+
+" Don't use Ex mode, use Q for formatting
+map Q gq
+
+" CTRL-U in insert mode deletes a lot.  Use CTRL-G u to first break undo,
+" so that you can undo CTRL-U after inserting a line break.
+inoremap <C-U> <C-G>u<C-U>
+
+"" Bob says that in debian 8, mouse=a causes vim to go to 
+"" visual mode when you click, so then the cut and paste from the
+"" screen does not work,  try to disable interactivley with:
+"" set mouse=v
+""
+"" In many terminal emulators the mouse works just fine, thus enable it.
+"if has('mouse')
+"  set mouse=a
+"endif
+
+" Switch syntax highlighting on, when the terminal has colors
+" Also switch on highlighting the last used search pattern.
+if &t_Co > 2 || has("gui_running")
+  syntax on
+  set hlsearch
+endif
+
+" Only do this part when compiled with support for autocommands.
+if has("autocmd")
+
+  " Enable file type detection.
+  " Use the default filetype settings, so that mail gets 'tw' set to 72,
+  " 'cindent' is on in C files, etc.
+  " Also load indent files, to automatically do language-dependent indenting.
+  "filetype plugin indent on
+  filetype plugin indent off
+	
+
+  " Put these in an autocmd group, so that we can delete them easily.
+  augroup vimrcEx
+  au!
+
+  " For all text files set 'textwidth' to 78 characters.
+  " autocmd FileType text setlocal textwidth=78
+
+  " When editing a file, always jump to the last known cursor position.
+  " Don't do it when the position is invalid or when inside an event handler
+  " (happens when dropping a file on gvim).
+  " Also don't do it when the mark is in the first line, that is the default
+  " position when opening a file.
+  autocmd BufReadPost *
+    \ if line("'\"") > 1 && line("'\"") <= line("$") |
+    \   exe "normal! g`\"" |
+    \ endif
+
+  augroup END
+
+else
+
+  set autoindent		" always set autoindenting on
+
+endif " has("autocmd")
+
+" Convenient command to see the difference between the current buffer and the
+" file it was loaded from, thus the changes you made.
+" Only define it when not defined already.
+if !exists(":DiffOrig")
+  command DiffOrig vert new | set bt=nofile | r ++edit # | 0d_ | diffthis
+		  \ | wincmd p | diffthis
+endif
+set tabstop=4
+set shiftwidth=4
+set expandtab
+set ic
+set noerrorbells
+set visualbell
+EOF
+# "
 ###############################################################################
 ## Install Google Chrome for testing ON A VM
 ## For my tiny install on the old computer, I can not afford
