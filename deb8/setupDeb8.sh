@@ -418,6 +418,21 @@ if [ "${INST_OPTIONAL_GUI_APPS}" = 'y' ]; then
 
 	apt-get -y install texlive
 	apt-get -y install  gnome-disk-utility gparted
+
+    echo "I am removing GNOME Tracker, which scans your computer and makes"
+    echo "unsecure indexes of your personal data."
+    apt-get -y remove tracker
+    apt-get -y autoremove
+    # The autoremove might remove some other things, so I will reinstall
+    # a few things:
+    apt-get -y install gnome-calculator
+    apt-get -y install gnome-dictionary
+    #apt-get -y install gnome-font-viewer
+    apt-get -y install gnome-menus
+    apt-get -y install gnome-screenshot
+    apt-get -y install gnome-system-monitor
+    apt-get -y install gnome-tweak-tool
+###############################################################################
 fi
 
 ###############################################################################
