@@ -12,7 +12,6 @@
 # is in the same format of rules that are created by
 # iptables-save (or are systematically modififed).
 ###############################################################################
-#####
 # To make the rules active at device up/down,
 # add the 'pre-up' and 'pre-down' rules to the 
 # /etc/network/interfaces file for the associated device.
