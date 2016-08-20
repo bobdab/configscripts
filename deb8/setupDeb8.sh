@@ -200,43 +200,47 @@ fi
 
 
 INST_XFS='n'
-if confirm "Do you want to install support for xfs file system: "; then
+if confirm "Do you want to install support for xfs file system (y/n): "; then
   INST_XFS='y'
 fi
 
 INST_LIBVIRT='n'
-if confirm "Do you want to install libvirt for virtualization?: "; then
+if confirm "Do you want to install libvirt for virtualization? (y/n): "; then
   INST_LIBVIRT='y'
 fi
 
 INST_OPTIONAL_GUI_APPS='n'
-MY_PROMPT="Do you want to install nonessential graphical pgms (latex, gnucash, R, libreoffice): "
+MY_PROMPT="Do you want to install nonessential graphical pgms (latex, gnucash, R, libreoffice) (y/n): "
 if confirm "${MY_PROMPT}"; then
   INST_OPTIONAL_GUI_APPS='y'
 fi
 
+INST_R='n'
+if confirm "Do you want to install R (cran stats program)? (y/n): "; then
+  INST_R='y'
+fi
 
 
 LIB_MOBILE_DEV='n'
-MY_PROMPT="Do you want to install libimobiledevice-dev to talk to iPhone/iPod Touch: "
+MY_PROMPT="Do you want to install libimobiledevice-dev to talk to iPhone/iPod Touch (y/n): "
 if confirm "${MY_PROMPT}"; then
   LIB_MOBILE_DEV='y'
 fi
 
 
 INST_SYNFIG='n'
-if confirm "Do you want to install synfig (cartoon creator)?: "; then
+if confirm "Do you want to install synfig (cartoon creator)? (y/n): "; then
   INST_SYNFIG='y'
 fi
 
 
 INST_TOR='n'
-if confirm "Do you want to install tor and privoxy?: "; then
+if confirm "Do you want to install tor and privoxy? (y/n): "; then
   INST_TOR='y'
 fi
 
 INST_LOC_NET='n'
-if confirm "Do you want to make the local network point to a static address of 10.0.0.5 in /etc/network/interfaces?: "; then
+if confirm "Do you want to make the local network point to a static address of 10.0.0.5 in /etc/network/interfaces? (y/n): "; then
   INST_LOC_NET='y'
 fi
 
@@ -406,9 +410,66 @@ if [ -n "${TESTBELL}" ]; then
     
 fi
 ###############################################################################
+if [ "${INST_R}" = 'y' ]; then
+    echo "installing R (cran) with some extra libraries..."
+    echo "(note, do not install packages with install.packages() in R."
+    echo "Use the install commands here because they will be matched"
+    echo "to the correct version of R used by Debian"
+    apt-get -y install r-base-dev
+
+    
+    if [ "${INST_OPTIONAL_GUI_APPS}" = 'y' ]; then
+        apt-get -y install r-recommended
+        apt-get -y install r-cran-boot
+        apt-get -y install r-cran-car
+        apt-get -y install r-cran-date
+        apt-get -y install r-cran-effects
+        apt-get -y install r-cran-foreign
+        #apt-get -y install r-cran-gdata
+        #apt-get -y install r-cran-gmodels
+        #apt-get -y install r-cran-gplots
+        #apt-get -y install r-cran-gregmisc
+        #apt-get -y install r-cran-gtools
+        apt-get -y install r-cran-hmisc
+        apt-get -y install r-cran-kernsmooth
+        apt-get -y install r-cran-lattice
+        apt-get -y install r-cran-latticeextra
+        apt-get -y install r-cran-lme4
+        apt-get -y install r-cran-lmtest
+        apt-get -y install r-cran-mcmcpack
+        apt-get -y install r-cran-mnormt
+        apt-get -y install r-cran-nlme
+        apt-get -y install r-cran-permute
+        apt-get -y install r-mathlib
+        apt-get -y install r-cran-e1071
+        apt-get -y install r-cran-evaluate
+        apt-get -y install r-cran-gam
+        apt-get -y install r-cran-getopt
+        apt-get -y install r-cran-maps
+        apt-get -y install r-cran-maptools
+        apt-get -y install r-cran-mass
+        apt-get -y install r-cran-matrixstats
+        apt-get -y install r-cran-misctools
+        apt-get -y install r-cran-multicore
+        apt-get -y install r-cran-mvnormtest
+        apt-get -y install r-cran-tcltk2
+        apt-get -y install r-cran-vegan
+        apt-get -y install r-cran-xtable
+        apt-get -y install r-cran-matrix
+        apt-get -y install r-cran-scatterplot3d
+        apt-get -y install r-cran-survival
+        #apt-get -y install r-cran-zelig
+    else
+        echo "some of the added packages for R require"
+        echo "a GUI desktop, so out of laziness, I"
+        echo "will not install any of the extra R" 
+        echo "packages to avoid installing GUI dependents"
+        echo "on a command-line machine."
+    fi
+fi
 
 if [ "${INST_OPTIONAL_GUI_APPS}" = 'y' ]; then
-	apt-get -y install r-base-dev libreoffice
+	apt-get -y install  libreoffice
 
 	apt-get -y install gnucash
 
