@@ -478,10 +478,17 @@ if [ "${INST_OPTIONAL_GUI_APPS}" = 'y' ]; then
     apt-get -y install xfburn
 
 	apt-get -y install texlive
+    # I used the first two to convert latex
+    # output to different formats
+    apt-get -y install pdf2html 
+    apt-get -y install dvi2ps
+ 
 	apt-get -y install  gnome-disk-utility gparted
 
     echo "I am removing GNOME Tracker, which scans your computer and makes"
     echo "unsecure indexes of your personal data."
+    echo "There are several side-effects of doing this,"
+    echo "so you might not want to do this."
     apt-get -y remove tracker
     apt-get -y autoremove
     # The autoremove might remove some other things, so I will reinstall
