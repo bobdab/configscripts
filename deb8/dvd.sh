@@ -11,10 +11,11 @@ echo "title 5 and beyond."
 echo "The options for --chapter might not work for you if you are playing"
 echo "the wrong title."
 
-DVDTitle=$1
-if [ -n "${DVDTitle}" ]; then
-    DVDTitle=1
+DVDTitle="$1"
+if [ -z "${DVDTitle}" ]; then
+    DVDTitle="1"
 fi
+echo "I am playing title ${DVDTitle}"
 #mplayer dvd://${DVDTitle} --chapter=0-40
 mplayer dvd://${DVDTitle}  --chapter=0-40
 
