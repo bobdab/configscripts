@@ -448,6 +448,7 @@ if [ "${INST_R}" = 'y' ]; then
         apt-get -y install r-cran-maps
         apt-get -y install r-cran-maptools
         apt-get -y install r-cran-mass
+        #apt-get -y install r-cran-moments # not avail for my version of R
         apt-get -y install r-cran-matrixstats
         apt-get -y install r-cran-misctools
         apt-get -y install r-cran-multicore
